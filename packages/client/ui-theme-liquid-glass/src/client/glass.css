@@ -4,7 +4,7 @@
    backdrop, backdrop blur, and specular edges. */
 
 body[data-ds-glass] {
-  /* The wallpaper the glass panes refract: a deep aurora gradient. */
+  /* The aurora gradient behind the rain canvas (the canvas draws over it). */
   background:
     radial-gradient(120% 90% at 12% 0%, rgb(48 62 120 / 55%) 0%, transparent 55%),
     radial-gradient(100% 80% at 88% 12%, rgb(28 96 120 / 42%) 0%, transparent 58%),
@@ -12,6 +12,36 @@ body[data-ds-glass] {
     radial-gradient(90% 90% at 40% 100%, rgb(20 60 90 / 30%) 0%, transparent 55%),
     #070b14;
   background-attachment: fixed;
+}
+
+/* Matrix rain wallpaper: the bottom-most layer, dimmed by a scrim so UI text
+   stays readable above it. The canvas ignores pointer events. */
+[data-dsg-matrix-rain-wallpaper] {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+[data-dsg-matrix-rain-wallpaper] matrix-rain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.55;
+}
+
+[data-dsg-matrix-rain-wallpaper]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(4 7 14 / 46%);
+}
+
+/* The app frame rides above the wallpaper. */
+body[data-ds-glass] > [class*='_frame_'] {
+  position: relative;
+  z-index: 1;
 }
 
 /* Sidebar column: the thinnest pane, blurred over the wallpaper. */

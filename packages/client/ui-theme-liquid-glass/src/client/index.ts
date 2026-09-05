@@ -21,9 +21,13 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import glassCss from './glass.css?inline'
+import { mountMatrixRain, unmountMatrixRain } from './matrix-rain-wallpaper.ts'
 import { GLASS_TOKENS } from './tokens.ts'
 import { en, zh, type LiquidGlassLocaleKey } from './locales.ts'
 import { GlassRow } from './GlassRow.tsx'
+
+/** Required services (cordis fiber inject). Consumer of ctx.slots/theme/locale. */
+export const inject = ['slots', 'theme', 'locale']
 
 /** Theme id this plugin registers. */
 export const LIQUID_GLASS_THEME_ID = 'liquid-glass'
@@ -82,8 +86,13 @@ export function apply(ctx: ClientContext): void {
 
   // Project the glass scope onto the body while the theme is active.
   const applyScope = (activeId: string): void => {
-    if (activeId === LIQUID_GLASS_THEME_ID) document.body.setAttribute(GLASS_ATTRIBUTE, '')
-    else document.body.removeAttribute(GLASS_ATTRIBUTE)
+    if (activeId === LIQUID_GLASS_THEME_ID) {
+      document.body.setAttribute(GLASS_ATTRIBUTE, '')
+      mountMatrixRain('silicon-valley')
+    } else {
+      document.body.removeAttribute(GLASS_ATTRIBUTE)
+      unmountMatrixRain()
+    }
   }
   applyScope(theme.getTheme().active.id)
   ctx.effect(() => ctx.on('theme/change', (snapshot) => { applyScope(snapshot.active.id) }), 'ui-theme-liquid-glass: glass scope')
@@ -94,6 +103,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => () => {
     disposeTheme()
     document.body.removeAttribute(GLASS_ATTRIBUTE)
+    unmountMatrixRain()
   }, 'ui-theme-liquid-glass: theme registration')
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
