@@ -83,10 +83,11 @@ describe('usage section', () => {
   })
 
   it('shows the failure copy with the wire code when the call fails', async () => {
-    const screen = render(<UsageSection {...propsFor(async () => ({ ok: false, code: 'gateway/internal' }))} />)
+    const screen = render(<UsageSection {...propsFor(async () => ({ ok: false, code: 'gateway/internal', detail: 'client api: usage/totals failed: HTTP 404' }))} />)
     await act(async () => { await Promise.resolve() })
     expect(screen.getByText('Usage data is unavailable')).toBeDefined()
     expect(screen.getByText('gateway/internal')).toBeDefined()
+    expect(screen.getByText('client api: usage/totals failed: HTTP 404')).toBeDefined()
   })
 
   it('refetches on the refresh affordance', async () => {

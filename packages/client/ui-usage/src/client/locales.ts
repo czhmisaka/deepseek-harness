@@ -2,6 +2,11 @@
 
 export type UsageLocaleKey =
   | 'nav'
+  | 'bubbleAria'
+  | 'bubbleTotal'
+  | 'close'
+  | 'closeMark'
+  | 'bubbleMark'
   | 'title'
   | 'intro'
   | 'refresh'
@@ -30,6 +35,11 @@ export type UsageLocaleKey =
 
 export const en: Record<UsageLocaleKey, string> = {
   nav: 'Usage',
+  bubbleAria: 'Token usage bubble',
+  bubbleTotal: 'Total tokens',
+  close: 'Close',
+  closeMark: '\u00d7',
+  bubbleMark: '\u03a3',
   title: 'Token usage',
   intro: 'Whole-deployment token accounting across every session, recorded in real time.',
   refresh: 'Refresh',
@@ -59,6 +69,11 @@ export const en: Record<UsageLocaleKey, string> = {
 
 export const zh: Record<UsageLocaleKey, string> = {
   nav: '用量统计',
+  bubbleAria: 'Token 用量气泡',
+  bubbleTotal: '总 tokens',
+  close: '关闭',
+  closeMark: '\u00d7',
+  bubbleMark: '\u03a3',
   title: 'Token 用量',
   intro: '跨所有会话、实时记录的整个部署 token 计量。',
   refresh: '刷新',
