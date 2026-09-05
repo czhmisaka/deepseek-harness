@@ -299,6 +299,10 @@
     - id: ui-usage
       name: '@deepseek-ai/dsh-client-ui-usage'
 
+    # Liquid Glass: the optional frosted-glass theme over the dark base.
+    - id: ui-theme-liquid-glass
+      name: '@deepseek-ai/dsh-client-ui-theme-liquid-glass'
+
     # Plan control: the composer plan seat over the plan projection + /plan channel.
     - id: ui-plan
       name: '@deepseek-ai/dsh-client-ui-plan'
