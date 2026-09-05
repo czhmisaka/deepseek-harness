@@ -23,7 +23,9 @@ export type UsageLocaleKey =
   | 'todayHeading'
   | 'todayNone'
   | 'trendHeading'
-  | 'trendDays'
+  | 'range24h'
+  | 'range7d'
+  | 'range30d'
   | 'trendEmpty'
   | 'routesHeading'
   | 'routesEmpty'
@@ -64,7 +66,9 @@ export const en: Record<UsageLocaleKey, string> = {
   todayHeading: 'Today (UTC)',
   todayNone: 'No usage today yet.',
   trendHeading: 'Usage over time (UTC)',
-  trendDays: '{count} days',
+  range24h: '24 hours',
+  range7d: '7 days',
+  range30d: '30 days',
   trendEmpty: 'Not enough history for a trend yet.',
   routesHeading: 'By model',
   routesEmpty: 'No routes recorded.',
@@ -106,7 +110,9 @@ export const zh: Record<UsageLocaleKey, string> = {
   todayHeading: '今日（UTC）',
   todayNone: '今天还没有用量。',
   trendHeading: '用量走势（UTC）',
-  trendDays: '{count} 天',
+  range24h: '24 小时',
+  range7d: '7 天',
+  range30d: '30 天',
   trendEmpty: '历史还不足以为你画出走势。',
   routesHeading: '按模型',
   routesEmpty: '暂无路由记录。',

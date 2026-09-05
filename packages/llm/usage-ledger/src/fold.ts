@@ -7,7 +7,7 @@
  */
 
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
-import type { UsageLedgerDayTotals, UsageLedgerModelTotals, UsageLedgerRecord, UsageLedgerSessionTotals, UsageLedgerTotals } from './types.ts'
+import type { UsageLedgerDayTotals, UsageLedgerHourTotals, UsageLedgerModelTotals, UsageLedgerRecord, UsageLedgerSessionTotals, UsageLedgerTotals } from './types.ts'
 
 /** Mutable accumulator behind one totals value; not part of the public surface. */
 export interface UsageTotalsAccumulator {
@@ -20,6 +20,7 @@ export interface UsageTotalsAccumulator {
   lastRecordTime: number | null
   byModel: Map<string, UsageLedgerModelTotals>
   byDay: Map<string, UsageLedgerDayTotals>
+  byHour: Map<string, UsageLedgerHourTotals>
   bySession: Map<string, UsageLedgerSessionTotals>
 }
 
@@ -63,6 +64,7 @@ export function createAccumulator(): UsageTotalsAccumulator {
     lastRecordTime: null,
     byModel: new Map(),
     byDay: new Map(),
+    byHour: new Map(),
     bySession: new Map(),
   }
 }
@@ -97,6 +99,13 @@ export function accumulateRecord(accumulator: UsageTotalsAccumulator, record: Us
     accumulator.byDay.set(day, dayTotals)
   }
   accumulateBucket(dayTotals, record)
+  const hour = new Date(record.time).toISOString().slice(0, 13)
+  let hourTotals = accumulator.byHour.get(hour)
+  if (hourTotals === undefined) {
+    hourTotals = { hour, requests: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0 }
+    accumulator.byHour.set(hour, hourTotals)
+  }
+  accumulateBucket(hourTotals, record)
   let sessionTotals = accumulator.bySession.get(record.sessionId)
   if (sessionTotals === undefined) {
     sessionTotals = {
@@ -112,9 +121,13 @@ export function accumulateRecord(accumulator: UsageTotalsAccumulator, record: Us
   }
 }
 
+/** Trailing hours the fold keeps in byHour; bounds the wire payload. */
+const HOURLY_WINDOW_HOURS = 48
+
 /**
  * Finish a fold: freeze the totals with their display ordering (by-model
- * largest first, by-day ascending).
+ * largest first, by-day ascending, by-hour ascending inside the trailing
+ * window).
  *
  * @param accumulator - the completed fold state.
  * @returns a deeply frozen totals snapshot.
@@ -130,6 +143,9 @@ export function finishTotals(accumulator: UsageTotalsAccumulator): UsageLedgerTo
     if (right.totalTokens !== left.totalTokens) return right.totalTokens - left.totalTokens
     return left.sessionId < right.sessionId ? -1 : 1
   })
+  const byHour = [...accumulator.byHour.values()]
+    .sort((left, right) => left.hour < right.hour ? -1 : 1)
+    .slice(-HOURLY_WINDOW_HOURS)
   return deepFreeze({
     requests: accumulator.requests,
     inputTokens: accumulator.inputTokens,
@@ -139,6 +155,7 @@ export function finishTotals(accumulator: UsageTotalsAccumulator): UsageLedgerTo
     totalTokens: accumulator.totalTokens,
     byModel,
     byDay,
+    byHour,
     bySession,
     lastRecordTime: accumulator.lastRecordTime,
   })

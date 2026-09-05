@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`@deepseek-ai/dsh-usage-ledger` 记录整个 harness 部署的每一次计费模型调用：每条带用量上报的 `assistant/message` 事件在提交的瞬间就会作为一行 JSON 追加进 harness home 下的只追加账本文件，`ctx.usageLedger` 再把文件折叠成整本账的总量——全量、按路由、按 UTC 日期、按会话——并通过 `/usage` 命令展示。这份账本跨会话持久：翻页、压缩、会话删除与进程重启都不影响它，也与 `dsh-token-meter` 提供的按会话 `tokenUsage` 投影相互独立。它自身不添加任何提示词、消息、schema 或工具。
+`@deepseek-ai/dsh-usage-ledger` 记录整个 harness 部署的每一次计费模型调用：每条带用量上报的 `assistant/message` 事件在提交的瞬间就会作为一行 JSON 追加进 harness home 下的只追加账本文件，`ctx.usageLedger` 再把文件折叠成整本账的总量——全量、按路由、按 UTC 日期、按 UTC 小时（最近 48 小时窗口）、按会话——并通过 `/usage` 命令展示。这份账本跨会话持久：翻页、压缩、会话删除与进程重启都不影响它，也与 `dsh-token-meter` 提供的按会话 `tokenUsage` 投影相互独立。它自身不添加任何提示词、消息、schema 或工具。
 
 ## 目录
 
@@ -48,11 +48,11 @@ kind: "package-reference"
 
 ### 读取总量
 
-`ctx.usageLedger.totals()` 返回深度冻结的快照：全量合计、按总 token 降序的路由明细、按 UTC 日升序的日合计、按总 token 降序且附带各自最新记录时间的会话明细，以及最新记录时间。当文件的大小或 mtime 越过缓存折叠点——包括共享同一 harness home 的其他进程的追加——折叠会重读文件，否则直接返回缓存快照。
+`ctx.usageLedger.totals()` 返回深度冻结的快照：全量合计、按总 token 降序的路由明细、按 UTC 日升序的日合计、最近 48 小时内按 UTC 小时升序的小时合计、按总 token 降序且附带各自最新记录时间的会话明细，以及最新记录时间。当文件的大小或 mtime 越过缓存折叠点——包括共享同一 harness home 的其他进程的追加——折叠会重读文件，否则直接返回缓存快照。
 
 ### /usage 命令
 
-组合中存在命令注册表时，插件注册全局 `/usage` 命令，渲染全量数字、当日（UTC）数字、前五个路由以及前五个会话及其最近活动日；空账本则渲染指向账本文件的提示。
+组合中存在命令注册表时，插件注册全局 `/usage` 命令，渲染全量数字、当日（UTC）数字、最近 24 小时汇总、前五个路由以及前五个会话及其最近活动日；空账本则渲染指向账本文件的提示。
 
 -----
 

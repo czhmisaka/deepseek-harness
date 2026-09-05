@@ -65,6 +65,12 @@ export interface UsageLedgerDayTotals extends UsageLedgerBucket {
   day: string
 }
 
+/** Totals for one UTC hour inside the trailing window. */
+export interface UsageLedgerHourTotals extends UsageLedgerBucket {
+  /** UTC hour key (YYYY-MM-DDTHH) the records' append times fall in. */
+  hour: string
+}
+
 /** All-time totals for one session id. */
 export interface UsageLedgerSessionTotals extends UsageLedgerBucket {
   /** Id of the session that made the billed calls. */
@@ -91,6 +97,8 @@ export interface UsageLedgerTotals {
   byModel: readonly UsageLedgerModelTotals[]
   /** Per-UTC-day totals sorted ascending by day. */
   byDay: readonly UsageLedgerDayTotals[]
+  /** Per-UTC-hour totals for the trailing 48 hours, sorted ascending by hour. */
+  byHour: readonly UsageLedgerHourTotals[]
   /** Per-session totals sorted by totalTokens descending, then sessionId ascending. */
   bySession: readonly UsageLedgerSessionTotals[]
   /** Append time of the newest record, epoch ms; null when the ledger is empty. */

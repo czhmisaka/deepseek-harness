@@ -36,7 +36,7 @@ Mount the plugin in the web composition beside the settings shell and the Remote
 
 - **All time** — request count and the four disjoint token buckets plus the billed total, in compact humanized form.
 - **Today (UTC)** — today's requests and total, or a no-usage note.
-- **Usage over time** — a calendar-aligned area chart of daily totals with a 7/30-day range toggle; days without usage read as zero, and the axis always ends at today (UTC).
+- **Usage over time** — a calendar-aligned area chart with a 24-hours / 7-day / 30-day range toggle: hourly buckets over the trailing day, daily totals beyond. Buckets without usage read as zero, and the axis always ends at the current hour or today (UTC).
 - **By model** — the top eight routes with requests and total tokens, plus a remainder line.
 - **By session** — the top ten sessions with requests, total tokens, and each session's latest activity day (UTC), plus a remainder line; the row's hover title carries the full session id.
 - **Ledger file** — the symbolic ledger location (`~/.dsh/...` or `$DSH_HOME/...`).
@@ -93,7 +93,7 @@ No effect. The section contributes no request content, so cache identity is unch
 These limits define where the dashboard stops and future work begins. They are current package constraints, not a comparison of display approaches or a task backlog.
 
 - **No live updates** — the panel fetches on mount and on Refresh; a live-updating counter is deferred until a consumer needs it, because the ledger changes on every model call.
-- **Time resolution is UTC days** — the ledger folds per UTC calendar day, so the chart cannot split a day into hours until a per-hour fold bucket exists.
+- **Time resolution is UTC buckets** — the 7/30-day views fold per UTC calendar day and the 24-hour view per UTC hour; the ledger keeps hourly buckets only over its trailing 48-hour window, so hour-level history beyond that is not retained.
 - **Route table is capped at eight rows** — the remainder renders as a count; per-route pagination belongs to a fuller explorer surface.
 - **Session rows show ids, not titles** — the ledger records session ids only, so the table labels carry the id prefix and the hover title the full id; human-readable session titles belong to a richer query surface.
 

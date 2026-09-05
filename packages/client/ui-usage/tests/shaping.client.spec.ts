@@ -59,6 +59,7 @@ function baseTotals(): UsageLedgerTotals {
     totalTokens: 251500,
     byModel: [routeRow(0)],
     byDay: [day('2026-09-01', 1000)],
+    byHour: [hourRow('2026-09-01T10', 1000)],
     bySession: [sessionRow(0)],
     lastRecordTime: 1000,
   }
@@ -70,13 +71,26 @@ function snapshotOf(overrides: Partial<UsageLedgerTotals>): UsageLedgerSnapshot 
 }
 
 /** Shaped view over one totals override at one chart range. */
-function viewOf(overrides: Partial<UsageLedgerTotals>, range: SeriesRange = 7) {
+function viewOf(overrides: Partial<UsageLedgerTotals>, range: SeriesRange = '7d') {
   return shapeDashboard(snapshotOf(overrides), labels, range)
 }
 
 /** The UTC calendar day key of "now" minus the given whole days. */
 function dayKeyAt(daysAgo: number): string {
   return new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10)
+}
+
+/** The UTC hour key of "now" minus the given whole hours. */
+function hourKeyAt(hoursAgo: number): string {
+  return new Date(Date.now() - hoursAgo * 3_600_000).toISOString().slice(0, 13)
+}
+
+/** One recorded hour with a zeroed bucket set and the given total. */
+function hourRow(key: string, totalTokens: number) {
+  return {
+    hour: key, requests: 1, inputTokens: 0, outputTokens: 0,
+    cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens,
+  }
 }
 
 describe('formatCompactCount', () => {
@@ -90,7 +104,7 @@ describe('formatCompactCount', () => {
 
 describe('shapeDashboard', () => {
   it('shapes the six figures, routes, and ledger location', () => {
-    const view = shapeDashboard(snapshotOf({}), labels, 7)
+    const view = shapeDashboard(snapshotOf({}), labels, '7d')
     expect(view.figures.map(figure => figure.id)).toEqual([
       'requests', 'input', 'cacheRead', 'cacheWrite', 'output', 'total',
     ])
@@ -109,7 +123,7 @@ describe('shapeDashboard', () => {
   })
 
   it('returns an all-zero series before any recorded day', () => {
-    const view = viewOf({ byDay: [], byModel: [], bySession: [] })
+    const view = viewOf({ byDay: [], byHour: [], byModel: [], bySession: [] })
     expect(view.series.points).toHaveLength(7)
     expect(view.series.points.every(point => !point.active && point.y === 0)).toBe(true)
     expect(view.series.peak).toBe('0')
@@ -121,16 +135,16 @@ describe('shapeDashboard', () => {
   it('shapes a calendar-aligned zero-filled series ending today', () => {
     const view = viewOf({ byDay: [day(dayKeyAt(0), 500), day('2026-08-20', 900)] })
     expect(view.series.points).toHaveLength(7)
-    expect(view.series.points[6]).toMatchObject({ day: dayKeyAt(0), display: '500', active: true })
+    expect(view.series.points[6]).toMatchObject({ key: dayKeyAt(0), display: '500', active: true })
     // A recorded day outside the range drops out; recorded zero days read as zero.
-    expect(view.series.points.some(point => point.day === '2026-08-20')).toBe(false)
+    expect(view.series.points.some(point => point.key === '2026-08-20')).toBe(false)
     expect(view.series.points[0]).toMatchObject({ active: false, y: 0 })
   })
 
   it('extends the series to thirty points on the wider range', () => {
-    const view = viewOf({ byDay: [day(dayKeyAt(0), 500)] }, 30)
+    const view = viewOf({ byDay: [day(dayKeyAt(0), 500)] }, '30d')
     expect(view.series.points).toHaveLength(30)
-    expect(view.series.points[29]).toMatchObject({ day: dayKeyAt(0), active: true })
+    expect(view.series.points[29]).toMatchObject({ key: dayKeyAt(0), active: true })
   })
 
   it('scales points against the peak day and labels the axis sparsely', () => {
@@ -141,6 +155,23 @@ describe('shapeDashboard', () => {
     expect(view.series.axis[0]).toMatchObject({ label: dayKeyAt(6).slice(5), x: 0 })
     expect(view.series.axis[view.series.axis.length - 1]).toMatchObject({ label: dayKeyAt(0).slice(5), x: 100 })
     expect(view.series.axis.length).toBeLessThanOrEqual(5)
+  })
+
+  it('shapes an hourly zero-filled series ending the current hour', () => {
+    const view = viewOf({ byHour: [hourRow(hourKeyAt(0), 500), hourRow('2020-01-01T00', 900)] }, '24h')
+    expect(view.series.points).toHaveLength(24)
+    expect(view.series.points[23]).toMatchObject({ key: hourKeyAt(0), display: '500', active: true, x: 100 })
+    expect(view.series.points[23]?.label).toBe(hourKeyAt(0).slice(11) + ':00')
+    expect(view.series.points.some(point => point.key === '2020-01-01T00')).toBe(false)
+    expect(view.series.points[0]).toMatchObject({ active: false, y: 0 })
+  })
+
+  it('scales the hourly series against its peak hour', () => {
+    const view = viewOf({ byHour: [hourRow(hourKeyAt(2), 500), hourRow(hourKeyAt(0), 1000)] }, '24h')
+    expect(view.series.peak).toBe('1K')
+    expect(view.series.points[21]).toMatchObject({ y: 50, active: true })
+    expect(view.series.points[23]).toMatchObject({ y: 100, active: true })
+    expect(view.series.points[10]?.title).toBe(hourKeyAt(13).slice(0, 10) + ' ' + hourKeyAt(13).slice(11) + ':00 · 0')
   })
 
   it('keeps at most eight route rows and summarizes the remainder', () => {

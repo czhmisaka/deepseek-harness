@@ -124,12 +124,43 @@ describe('usage fold', () => {
     expect(totals.bySession.map(entry => entry.sessionId)).toEqual(['s1', 's2'])
     expect(totals.bySession[0]).toMatchObject({ sessionId: 's1', requests: 2, totalTokens: 170, lastActivity: 1730086400000 })
     expect(totals.bySession[1]).toMatchObject({ sessionId: 's2', requests: 1, totalTokens: 2, lastActivity: 1730000000001 })
+    expect(totals.byHour.map(entry => entry.hour)).toEqual(['2024-10-27T03', '2024-10-28T03'])
+    expect(totals.byHour[0]).toMatchObject({ requests: 2, totalTokens: 22 })
+    expect(totals.byHour[1]).toMatchObject({ requests: 1, totalTokens: 150 })
     expect(totals.lastRecordTime).toBe(1730086400000)
     expect(Object.isFrozen(totals)).toBe(true)
     expect(Object.isFrozen(totals.byModel)).toBe(true)
     expect(Object.isFrozen(totals.byModel[0])).toBe(true)
+    expect(Object.isFrozen(totals.byHour)).toBe(true)
+    expect(Object.isFrozen(totals.byHour[0])).toBe(true)
     expect(Object.isFrozen(totals.bySession)).toBe(true)
     expect(Object.isFrozen(totals.bySession[0])).toBe(true)
+  })
+
+  it('keeps only the trailing 48 hourly buckets, ascending', () => {
+    const records: UsageLedgerRecord[] = []
+    for (let index = 0; index < 50; index++) {
+      records.push({
+        version: 1, time: Date.now() - (49 - index) * 3_600_000, sessionId: 's', provider: 'p', model: 'm',
+        inputTokens: 1, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+      })
+    }
+    const totals = foldRecords(records)
+    expect(totals.byHour).toHaveLength(48)
+    const hours = totals.byHour.map(entry => entry.hour)
+    expect([...hours].sort((left, right) => left < right ? -1 : 1)).toEqual(hours)
+    expect(hours[0]).toBe(new Date(Date.now() - 47 * 3_600_000).toISOString().slice(0, 13))
+  })
+
+  it('merges records inside one hour into a single bucket', () => {
+    const base = Date.now() - 120_000
+    const records: UsageLedgerRecord[] = [
+      { version: 1, time: base, sessionId: 's', provider: 'p', model: 'm', inputTokens: 2, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      { version: 1, time: base + 60_000, sessionId: 's', provider: 'p', model: 'm', inputTokens: 3, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    ]
+    const totals = foldRecords(records)
+    expect(totals.byHour).toHaveLength(1)
+    expect(totals.byHour[0]).toMatchObject({ requests: 2, inputTokens: 5 })
   })
 
   it('breaks total-tokens session ties by session id and tracks last activity', () => {
@@ -260,6 +291,7 @@ describe('usage ledger service', () => {
     expect(totals.requests).toBe(0)
     expect(totals.byModel).toEqual([])
     expect(totals.byDay).toEqual([])
+    expect(totals.byHour).toEqual([])
     expect(totals.bySession).toEqual([])
     expect(totals.lastRecordTime).toBeNull()
     appendUsage(session, USAGE_A)
@@ -377,6 +409,7 @@ describe('usage command text', () => {
     ]
     const text = formatUsageTotals(foldRecords(records), 'ledger')
     expect(text).not.toContain('Today')
+    expect(text).not.toContain('Last 24 hours')
     expect(text).toContain('By model:')
   })
 
@@ -392,6 +425,7 @@ describe('usage command text', () => {
     expect(text).toContain('Cache read 987.7K')
     expect(text).toContain('Output 250K')
     expect(text).toContain('Today (UTC ')
+    expect(text).toContain('Last 24 hours (UTC): 2 requests · 2.7M tokens')
     expect(text).toContain('deepseek-official/deepseek-v4-flash')
     expect(text).toContain('pi/gateway-model')
     expect(text).toContain('By session:')

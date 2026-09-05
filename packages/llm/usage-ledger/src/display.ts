@@ -14,6 +14,12 @@ const DISPLAYED_MODEL_ROUTES = 5
 /** Sessions listed under "By session" before the summary remainder line. */
 const DISPLAYED_SESSIONS = 5
 
+/** Hours aggregated into the "Last 24 hours" summary line. */
+const LAST_DAY_HOURS = 24
+
+/** Milliseconds per hour. */
+const MS_PER_HOUR = 3_600_000
+
 /**
  * Compact humanized token count: exact below 1000, one-decimal K below one
  * million, one-decimal M above, trailing zeros trimmed.
@@ -49,6 +55,11 @@ function activityDay(time: number): string {
   return new Date(time).toISOString().slice(0, 10)
 }
 
+/** The UTC hour key (YYYY-MM-DDTHH) of one epoch-ms time. */
+function hourKey(time: number): string {
+  return new Date(time).toISOString().slice(0, 13)
+}
+
 /**
  * Render the /usage command text for one totals snapshot.
  *
@@ -73,6 +84,13 @@ export function formatUsageTotals(totals: UsageLedgerTotals, ledgerDisplay: stri
   const todayTotals = totals.byDay.find(entry => entry.day === today)
   if (todayTotals !== undefined) {
     lines.push('Today (UTC ' + today + '): ' + todayTotals.requests.toLocaleString('en-US') + ' requests · ' + formatTokenCount(todayTotals.totalTokens) + ' tokens')
+  }
+  const windowFloor = hourKey(Date.now() - LAST_DAY_HOURS * MS_PER_HOUR)
+  const last24 = totals.byHour.filter(entry => entry.hour >= windowFloor)
+  if (last24.length > 0) {
+    const requests = last24.reduce((sum, entry) => sum + entry.requests, 0)
+    const tokens = last24.reduce((sum, entry) => sum + entry.totalTokens, 0)
+    lines.push('Last 24 hours (UTC): ' + requests.toLocaleString('en-US') + ' requests · ' + formatTokenCount(tokens) + ' tokens')
   }
   lines.push('By model:')
   for (const model of totals.byModel.slice(0, DISPLAYED_MODEL_ROUTES)) {

@@ -25,6 +25,10 @@ function snapshotOf(totalsOverrides: Partial<UsageLedgerTotals>): UsageLedgerSna
       { provider: 'pi', model: 'gateway', requests: 8, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 60_000 },
     ],
     byDay: [{ day: '2026-09-03', requests: 12, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 210_000 }],
+    byHour: [{
+      hour: new Date().toISOString().slice(0, 13), requests: 3, inputTokens: 0,
+      outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 5_000,
+    }],
     bySession: [
       { sessionId: 'session-63e82d3e-e4e9-49d7-8444-22bd34df0460', requests: 120, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 200_000, lastActivity: Date.UTC(2026, 8, 3) },
     ],
@@ -58,7 +62,9 @@ const copy: Record<string, string> = {
   todayHeading: 'Today (UTC)',
   todayNone: 'No usage today yet.',
   trendHeading: 'Usage over time (UTC)',
-  trendDays: '{count} days',
+  range24h: '24 hours',
+  range7d: '7 days',
+  range30d: '30 days',
   trendEmpty: 'Not enough history for a trend yet.',
   routesHeading: 'By model',
   routesEmpty: 'No routes recorded.',
@@ -93,6 +99,7 @@ describe('usage section', () => {
     expect(screen.getByText((_, element) => element?.textContent === 'Ledger file: ~/.dsh/usage/usage.jsonl')).toBeDefined()
     expect(screen.getByText('63e82d3e…')).toBeDefined()
     expect(screen.getByText('2026-09-03')).toBeDefined()
+    expect(screen.getByText('24 hours')).toBeDefined()
     expect(screen.getByText('7 days')).toBeDefined()
     expect(screen.getByText('30 days')).toBeDefined()
   })
@@ -131,7 +138,7 @@ describe('usage section', () => {
   it('shows an empty ledger without trend, routes, or sessions', async () => {
     const emptyTotals = {
       requests: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
-      totalTokens: 0, byModel: [], byDay: [], bySession: [],
+      totalTokens: 0, byModel: [], byDay: [], byHour: [], bySession: [],
     }
     const screen = render(<UsageSection {...propsFor(async () => ({ ok: true as const, snapshot: snapshotOf(emptyTotals) }))} />)
     await act(async () => { await Promise.resolve() })
@@ -151,21 +158,25 @@ describe('usage section', () => {
     expect(screen.getByText('00000009')).toBeDefined()
   })
 
-  it('renders the time chart for a today entry and switches ranges without refetching', async () => {
-    const today = new Date().toISOString().slice(0, 10)
-    const byDay = [{
-      day: today, requests: 3, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 5_000,
+  it('renders the hourly chart by default and switches ranges without refetching', async () => {
+    const now = new Date()
+    const byHour = [{
+      hour: now.toISOString().slice(0, 13), requests: 3, inputTokens: 0,
+      outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 5_000,
     }]
     let loads = 0
     const screen = render(<UsageSection {...propsFor(async () => {
       loads += 1
-      return { ok: true as const, snapshot: snapshotOf({ byDay }) }
+      return { ok: true as const, snapshot: snapshotOf({ byHour }) }
     })} />)
     await act(async () => { await Promise.resolve() })
     expect(screen.getByRole('img', { name: 'Usage over time (UTC)' })).toBeDefined()
-    expect(screen.getByText(today.slice(5))).toBeDefined()
-    await act(async () => { screen.getByText('30 days').click() })
+    expect(screen.getByText(now.toISOString().slice(11, 13) + ':00')).toBeDefined()
+    expect(screen.getByText('24 hours').getAttribute('data-active')).toBe('true')
+    await act(async () => { screen.getByText('7 days').click() })
     expect(screen.getByRole('img', { name: 'Usage over time (UTC)' })).toBeDefined()
+    expect(screen.getByText(now.toISOString().slice(5, 10))).toBeDefined()
+    await act(async () => { screen.getByText('30 days').click() })
     expect(screen.getByText('30 days').getAttribute('data-active')).toBe('true')
     expect(loads).toBe(1)
   })

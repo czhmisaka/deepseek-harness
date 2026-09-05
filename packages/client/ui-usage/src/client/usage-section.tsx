@@ -34,6 +34,13 @@ export type UsageSectionProps =
   & PropsLocale<'usage'>
   & InjectFace<UsageSectionInjected>
 
+/** The localized label key of each selectable range. */
+const RANGE_LABEL_KEY: Record<SeriesRange, UsageLocaleKey> = {
+  '24h': 'range24h',
+  '7d': 'range7d',
+  '30d': 'range30d',
+}
+
 /** Shape state of the async dashboard load. */
 type LoadState =
   | { readonly phase: 'loading' }
@@ -44,7 +51,7 @@ type LoadState =
 export function UsageSection({ t, load }: UsageSectionProps) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
   // The chart range is a viewing choice: it re-shapes the held snapshot and never refetches.
-  const [range, setRange] = useState<SeriesRange>(7)
+  const [range, setRange] = useState<SeriesRange>('24h')
 
   const refresh = useCallback(() => {
     setState({ phase: 'loading' })
@@ -139,7 +146,7 @@ function Dashboard({ t, view, range, onRange }: {
                 data-active={range === option ? 'true' : undefined}
                 onClick={() => { onRange(option) }}
               >
-                {t('trendDays').replace('{count}', String(option))}
+                {t(RANGE_LABEL_KEY[option])}
               </button>
             ))}
           </div>
@@ -214,7 +221,7 @@ function toSvgY(y: number): number {
   return CHART_HEIGHT - 2 - (y / 100) * (CHART_HEIGHT - 4)
 }
 
-/** The SVG time chart: an area over evenly spaced UTC days with per-day hover titles. */
+/** The SVG time chart: an area over evenly spaced UTC buckets with per-bucket hover titles. */
 function TimeChart({ series, label }: { series: UsageSeriesView; label: string }) {
   const hitWidth = 100 / series.points.length
   const line = series.points.map(point => String(point.x) + ',' + String(toSvgY(point.y))).join(' ')
@@ -232,7 +239,7 @@ function TimeChart({ series, label }: { series: UsageSeriesView; label: string }
         <polyline className={css.trendLine} points={line} />
         {series.points.map(point => (
           <rect
-            key={point.day}
+            key={point.key}
             className={css.trendHit}
             x={Math.max(0, point.x - hitWidth / 2)}
             y={0}

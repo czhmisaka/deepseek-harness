@@ -8,7 +8,7 @@
  */
 
 import type {
-  UsageLedgerSessionTotals, UsageLedgerSnapshot, UsageLedgerTotals,
+  UsageLedgerHourTotals, UsageLedgerSessionTotals, UsageLedgerSnapshot, UsageLedgerTotals,
 } from '@deepseek-ai/dsh-api-remotes/client'
 
 /** One labeled figure the totals grid renders. */
@@ -23,19 +23,19 @@ export interface UsageFigureView {
 
 /** One plotted point of the usage-over-time chart. */
 export interface UsageSeriesPoint {
-  /** UTC calendar day (YYYY-MM-DD). */
-  readonly day: string
-  /** Short display label (MM-DD). */
+  /** UTC bucket key: a calendar day (YYYY-MM-DD) or an hour (YYYY-MM-DDTHH). */
+  readonly key: string
+  /** Short display label (MM-DD for days, HH:00 for hours). */
   readonly label: string
-  /** Hover title: day plus humanized total. */
+  /** Hover title: bucket plus humanized total. */
   readonly title: string
-  /** Humanized day total. */
+  /** Humanized bucket total. */
   readonly display: string
-  /** Horizontal position 0-100, evenly spaced by day index. */
+  /** Horizontal position 0-100, evenly spaced by bucket index. */
   readonly x: number
   /** Vertical position 0-100; 100 sits at the series peak. */
   readonly y: number
-  /** Whether the day carries any usage. */
+  /** Whether the bucket carries any usage. */
   readonly active: boolean
 }
 
@@ -47,18 +47,18 @@ export interface UsageSeriesAxisLabel {
   readonly x: number
 }
 
-/** The calendar-aligned daily series the time chart renders. */
+/** The calendar-aligned series the time chart renders. */
 export interface UsageSeriesView {
-  /** One point per calendar day in the selected range, oldest first. */
+  /** One point per hour or day in the selected range, oldest first. */
   readonly points: readonly UsageSeriesPoint[]
   /** Humanized series peak; the implicit y-axis reference. */
   readonly peak: string
-  /** Sparse day labels under the x-axis. */
+  /** Sparse labels under the x-axis. */
   readonly axis: readonly UsageSeriesAxisLabel[]
 }
 
-/** Selectable chart ranges, in UTC days. */
-export const SERIES_RANGES = [7, 30] as const
+/** Selectable chart ranges: trailing hours or trailing UTC days. */
+export const SERIES_RANGES = ['24h', '7d', '30d'] as const
 
 /** One selectable chart range. */
 export type SeriesRange = (typeof SERIES_RANGES)[number]
@@ -111,6 +111,12 @@ const SESSION_LABEL_CHARS = 8
 /** Milliseconds per UTC day; UTC days are a fixed length, so day stepping is exact. */
 const MS_PER_DAY = 86_400_000
 
+/** Milliseconds per hour; hour stepping on the UTC clock is exact the same way. */
+const MS_PER_HOUR = 3_600_000
+
+/** Points in the hourly view. */
+const HOURLY_POINTS = 24
+
 /** Roughly this many axis labels render under the chart. */
 const SERIES_AXIS_LABELS = 4
 
@@ -136,7 +142,7 @@ function scaledTokenCount(count: number, divisor: number): string {
  * Shape the wire snapshot into the dashboard view model.
  * @param snapshot - the frozen wire snapshot.
  * @param labels - the six localized figure labels keyed by figure id.
- * @param range - the chart's UTC-day range.
+ * @param range - the chart's granularity and span.
  * @returns the shaped dashboard view.
  */
 export function shapeDashboard(
@@ -178,31 +184,64 @@ function shapeToday(totals: UsageLedgerTotals): UsageDashboardView['today'] {
 }
 
 /**
- * The calendar-aligned daily series ending today (UTC). Days without a
- * recorded entry read as zero, so the x-axis is an honest calendar span
- * instead of the ledger's recorded days only.
+ * The series for one range, ending at the current hour (24h) or UTC day
+ * (7d/30d). Buckets without a recorded entry read as zero, so the x-axis is
+ * an honest calendar span instead of the ledger's recorded buckets only.
  */
-function shapeSeries(totals: UsageLedgerTotals, days: SeriesRange): UsageSeriesView {
+function shapeSeries(totals: UsageLedgerTotals, range: SeriesRange): UsageSeriesView {
+  if (range === '24h') return hourlySeries(totals)
+  return dailySeries(totals, range === '7d' ? 7 : 30)
+}
+
+/** The trailing 24 hourly buckets; hours without a record read as zero. */
+function hourlySeries(totals: UsageLedgerTotals): UsageSeriesView {
+  // An absent byHour reads empty: a freshly rebuilt client can render against
+  // a still-running Host whose fold predates the field.
+  const rows: readonly UsageLedgerHourTotals[] = Array.isArray(totals.byHour) ? totals.byHour : []
+  const tokensByHour = new Map(rows.map(entry => [entry.hour, entry.totalTokens]))
+  const now = Date.now()
+  const raw = Array.from({ length: HOURLY_POINTS }, (_, index) => {
+    const hour = utcHour(now - (HOURLY_POINTS - 1 - index) * MS_PER_HOUR)
+    return { key: hour, tokens: tokensByHour.get(hour) ?? 0 }
+  })
+  return finishSeries(
+    raw,
+    key => key.slice(11) + ':00',
+    (key, display) => key.slice(0, 10) + ' ' + key.slice(11) + ':00 · ' + display,
+  )
+}
+
+/** The trailing UTC daily buckets; days without a record read as zero. */
+function dailySeries(totals: UsageLedgerTotals, days: 7 | 30): UsageSeriesView {
   const tokensByDay = new Map(totals.byDay.map(entry => [entry.day, entry.totalTokens]))
   const now = Date.now()
   const raw = Array.from({ length: days }, (_, index) => {
     const day = utcDay(now - (days - 1 - index) * MS_PER_DAY)
-    return { day, tokens: tokensByDay.get(day) ?? 0 }
+    return { key: day, tokens: tokensByDay.get(day) ?? 0 }
   })
+  return finishSeries(raw, key => key.slice(5), (key, display) => key + ' · ' + display)
+}
+
+/** Shared point shaping: peak scaling, even spacing, and the sparse axis. */
+function finishSeries(
+  raw: readonly { key: string; tokens: number }[],
+  label: (key: string) => string,
+  title: (key: string, display: string) => string,
+): UsageSeriesView {
   const peak = raw.reduce((max, entry) => Math.max(max, entry.tokens), 0)
   const points = raw.map((entry, index) => ({
-    day: entry.day,
-    label: entry.day.slice(5),
-    title: entry.day + ' · ' + formatCompactCount(entry.tokens),
+    key: entry.key,
+    label: label(entry.key),
+    title: title(entry.key, formatCompactCount(entry.tokens)),
     display: formatCompactCount(entry.tokens),
-    x: Math.round((index / (days - 1)) * 100),
+    x: Math.round((index / (raw.length - 1)) * 100),
     y: peak === 0 ? 0 : Math.round((entry.tokens / peak) * 100),
     active: entry.tokens > 0,
   }))
   return { points, peak: formatCompactCount(peak), axis: seriesAxis(points) }
 }
 
-/** Roughly SERIES_AXIS_LABELS evenly spaced day labels, always ending at today. */
+/** Roughly SERIES_AXIS_LABELS evenly spaced bucket labels, always ending at the newest. */
 function seriesAxis(points: readonly UsageSeriesPoint[]): readonly UsageSeriesAxisLabel[] {
   if (points.length === 0) return []
   const step = Math.max(1, Math.ceil(points.length / (SERIES_AXIS_LABELS + 1)))
@@ -247,4 +286,9 @@ function shapeSessions(rows: readonly UsageLedgerSessionTotals[]): readonly Usag
 /** The UTC calendar day (YYYY-MM-DD) of one epoch-ms time. */
 function utcDay(time: number): string {
   return new Date(time).toISOString().slice(0, 10)
+}
+
+/** The UTC hour key (YYYY-MM-DDTHH) of one epoch-ms time. */
+function utcHour(time: number): string {
+  return new Date(time).toISOString().slice(0, 13)
 }

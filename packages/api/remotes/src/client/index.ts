@@ -35,6 +35,7 @@ export type {} from '@deepseek-ai/dsh-usage-ledger/remote'
 export type {
   UsageLedgerBucket,
   UsageLedgerDayTotals,
+  UsageLedgerHourTotals,
   UsageLedgerModelTotals,
   UsageLedgerSessionTotals,
   UsageLedgerSnapshot,
