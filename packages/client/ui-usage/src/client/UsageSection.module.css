@@ -121,6 +121,31 @@
   color: var(--dsw-alias-state-business-primary);
 }
 
+.composition {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  corner-shape: round;
+  overflow: hidden;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.compositionSegment[data-figure='input'] {
+  background: var(--dsw-alias-state-warn-primary);
+}
+
+.compositionSegment[data-figure='cacheRead'] {
+  background: var(--dsw-alias-state-success-primary);
+}
+
+.compositionSegment[data-figure='cacheWrite'] {
+  background: var(--dsw-alias-state-error-secondary);
+}
+
+.compositionSegment[data-figure='output'] {
+  background: var(--dsw-alias-state-business-primary);
+}
+
 .ledgerPath {
   margin: 0;
   font-size: 12px;
@@ -186,10 +211,45 @@
   font-variant-numeric: tabular-nums;
 }
 
+.trendPlot {
+  position: relative;
+}
+
 .trendChart {
   display: block;
   width: 100%;
   height: 96px;
+}
+
+.trendPeakDot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  corner-shape: round;
+  transform: translate(-50%, -50%);
+  background: var(--dsw-alias-state-warn-primary);
+  box-shadow: 0 0 0 2px var(--dsw-alias-bg-base);
+  pointer-events: none;
+}
+
+.trendHalf {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 9px;
+  color: var(--dsw-alias-label-caption);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  background: var(--dsw-alias-bg-base);
+  padding: 0 2px;
+}
+
+.trendGridline {
+  stroke: var(--dsw-alias-border-l3);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .trendAreaStopTop {

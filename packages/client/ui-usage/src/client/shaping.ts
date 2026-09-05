@@ -19,6 +19,20 @@ export interface UsageFigureView {
   readonly label: string
   /** Display value (compact number form). */
   readonly value: string
+  /** Exact count with digit separators, for the hover title. */
+  readonly exact: string
+}
+
+/** One segment of the token-composition bar: a bucket's share of the total. */
+export interface UsageCompositionSegment {
+  /** Bucket id, matching the figure ids of the four token buckets. */
+  readonly id: 'input' | 'cacheRead' | 'cacheWrite' | 'output'
+  /** Localized bucket label. */
+  readonly label: string
+  /** Share of the all-time billed total, 0-100. */
+  readonly percent: number
+  /** Exact bucket count with digit separators, for the hover title. */
+  readonly exact: string
 }
 
 /** One plotted point of the usage-over-time chart. */
@@ -27,7 +41,7 @@ export interface UsageSeriesPoint {
   readonly key: string
   /** Short display label (MM-DD for days, HH:00 for hours). */
   readonly label: string
-  /** Hover title: bucket plus humanized total. */
+  /** Hover title: bucket plus the exact count. */
   readonly title: string
   /** Humanized bucket total. */
   readonly display: string
@@ -53,6 +67,8 @@ export interface UsageSeriesView {
   readonly points: readonly UsageSeriesPoint[]
   /** Humanized series peak; the implicit y-axis reference. */
   readonly peak: string
+  /** Humanized half-peak; the mid gridline's reference value. */
+  readonly half: string
   /** Sparse labels under the x-axis. */
   readonly axis: readonly UsageSeriesAxisLabel[]
 }
@@ -73,6 +89,10 @@ export interface UsageRouteView {
   readonly tokens: string
   /** Token share against the table's largest row, 0-100, for the share bar. */
   readonly share: number
+  /** Exact total tokens with digit separators, for the hover title. */
+  readonly exact: string
+  /** Token share of the all-time billed total, 0-100, for the hover title. */
+  readonly shareOfTotal: number
 }
 
 /** One per-session table row. */
@@ -87,6 +107,10 @@ export interface UsageSessionView {
   readonly tokens: string
   /** Token share against the table's largest row, 0-100, for the share bar. */
   readonly share: number
+  /** Exact total tokens with digit separators, for the hover title. */
+  readonly exact: string
+  /** Token share of the all-time billed total, 0-100, for the hover title. */
+  readonly shareOfTotal: number
   /** UTC calendar day (YYYY-MM-DD) of the session's newest record. */
   readonly lastActivity: string
 }
@@ -94,13 +118,20 @@ export interface UsageSessionView {
 /** Fully shaped view model of one snapshot. */
 export interface UsageDashboardView {
   readonly figures: readonly UsageFigureView[]
-  readonly today: { readonly requests: string; readonly total: string } | undefined
+  readonly today: { readonly requests: string; readonly total: string; readonly exact: string } | undefined
+  readonly composition: readonly UsageCompositionSegment[]
+  readonly hasUsage: boolean
   readonly series: UsageSeriesView
   readonly routes: readonly UsageRouteView[]
   readonly hiddenRoutes: number
   readonly sessions: readonly UsageSessionView[]
   readonly hiddenSessions: number
   readonly ledgerPath: string
+}
+
+/** Exact count with digit separators; locale-neutral like the /usage command. */
+function formatExactCount(count: number): string {
+  return count.toLocaleString('en-US')
 }
 
 /** Routes rendered before the summary remainder line. */
@@ -162,21 +193,46 @@ export function shapeDashboard(
     : []
   return {
     figures: [
-      { id: 'requests', label: labels.requests, value: formatCompactCount(totals.requests) },
-      { id: 'input', label: labels.input, value: formatCompactCount(totals.inputTokens) },
-      { id: 'cacheRead', label: labels.cacheRead, value: formatCompactCount(totals.cacheReadTokens) },
-      { id: 'cacheWrite', label: labels.cacheWrite, value: formatCompactCount(totals.cacheWriteTokens) },
-      { id: 'output', label: labels.output, value: formatCompactCount(totals.outputTokens) },
-      { id: 'total', label: labels.total, value: formatCompactCount(totals.totalTokens) },
+      { id: 'requests', label: labels.requests, value: formatCompactCount(totals.requests), exact: formatExactCount(totals.requests) },
+      { id: 'input', label: labels.input, value: formatCompactCount(totals.inputTokens), exact: formatExactCount(totals.inputTokens) },
+      { id: 'cacheRead', label: labels.cacheRead, value: formatCompactCount(totals.cacheReadTokens), exact: formatExactCount(totals.cacheReadTokens) },
+      { id: 'cacheWrite', label: labels.cacheWrite, value: formatCompactCount(totals.cacheWriteTokens), exact: formatExactCount(totals.cacheWriteTokens) },
+      { id: 'output', label: labels.output, value: formatCompactCount(totals.outputTokens), exact: formatExactCount(totals.outputTokens) },
+      { id: 'total', label: labels.total, value: formatCompactCount(totals.totalTokens), exact: formatExactCount(totals.totalTokens) },
     ],
     today: shapeToday(totals),
+    composition: shapeComposition(totals, labels),
+    hasUsage: totals.requests > 0,
     series: shapeSeries(totals, range),
     routes: shapeRoutes(totals),
     hiddenRoutes: Math.max(0, totals.byModel.length - DISPLAYED_ROUTES),
-    sessions: shapeSessions(sessionRows),
+    sessions: shapeSessions(sessionRows, totals.totalTokens),
     hiddenSessions: Math.max(0, sessionRows.length - DISPLAYED_SESSIONS),
     ledgerPath: snapshot.ledgerDisplay,
   }
+}
+
+/**
+ * The four token buckets' shares of the all-time billed total, in the grid's
+ * dot colors; reads all-zero when nothing is billed yet.
+ */
+function shapeComposition(
+  totals: UsageLedgerTotals,
+  labels: Record<UsageFigureView['id'], string>,
+): readonly UsageCompositionSegment[] {
+  const buckets: readonly { id: UsageCompositionSegment['id']; tokens: number; label: string }[] = [
+    { id: 'input', tokens: totals.inputTokens, label: labels.input },
+    { id: 'cacheRead', tokens: totals.cacheReadTokens, label: labels.cacheRead },
+    { id: 'cacheWrite', tokens: totals.cacheWriteTokens, label: labels.cacheWrite },
+    { id: 'output', tokens: totals.outputTokens, label: labels.output },
+  ]
+  const total = totals.totalTokens
+  return buckets.map(bucket => ({
+    id: bucket.id,
+    label: bucket.label,
+    percent: shareOf(bucket.tokens, total),
+    exact: formatExactCount(bucket.tokens),
+  }))
 }
 
 /** Today's (UTC) figures, or undefined when no record falls on today. */
@@ -184,7 +240,11 @@ function shapeToday(totals: UsageLedgerTotals): UsageDashboardView['today'] {
   const today = utcDay(Date.now())
   const entry = totals.byDay.find(day => day.day === today)
   if (entry === undefined) return undefined
-  return { requests: formatCompactCount(entry.requests), total: formatCompactCount(entry.totalTokens) }
+  return {
+    requests: formatCompactCount(entry.requests),
+    total: formatCompactCount(entry.totalTokens),
+    exact: formatExactCount(entry.totalTokens),
+  }
 }
 
 /**
@@ -208,10 +268,21 @@ function hourlySeries(totals: UsageLedgerTotals): UsageSeriesView {
     const hour = utcHour(now - (HOURLY_POINTS - 1 - index) * MS_PER_HOUR)
     return { key: hour, tokens: tokensByHour.get(hour) ?? 0 }
   })
+  // A 24-hour window can cross midnight: label the first point and every
+  // day-boundary point with its date so HH:00 labels stay unambiguous.
+  const labeled = raw.map((entry, index) => {
+    const previous = index > 0 ? raw[index - 1] : undefined
+    const dayChanged = previous === undefined || previous.key.slice(0, 10) !== entry.key.slice(0, 10)
+    return {
+      ...entry,
+      label: index === 0 || dayChanged
+        ? entry.key.slice(5, 10) + ' ' + entry.key.slice(11) + ':00'
+        : entry.key.slice(11) + ':00',
+    }
+  })
   return finishSeries(
-    raw,
-    key => key.slice(11) + ':00',
-    (key, display) => key.slice(0, 10) + ' ' + key.slice(11) + ':00 · ' + display,
+    labeled,
+    (key, exact) => key.slice(0, 10) + ' ' + key.slice(11) + ':00 · ' + exact,
   )
 }
 
@@ -221,28 +292,31 @@ function dailySeries(totals: UsageLedgerTotals, days: 7 | 30): UsageSeriesView {
   const now = Date.now()
   const raw = Array.from({ length: days }, (_, index) => {
     const day = utcDay(now - (days - 1 - index) * MS_PER_DAY)
-    return { key: day, tokens: tokensByDay.get(day) ?? 0 }
+    return { key: day, tokens: tokensByDay.get(day) ?? 0, label: day.slice(5) }
   })
-  return finishSeries(raw, key => key.slice(5), (key, display) => key + ' · ' + display)
+  return finishSeries(raw, (key, exact) => key + ' · ' + exact)
 }
 
-/** Shared point shaping: peak scaling, even spacing, and the sparse axis. */
+/**
+ * Shared point shaping: peak scaling, even spacing, and the sparse axis. The
+ * hover title carries the exact count — the precision affordance on top of
+ * the compact axis and value forms.
+ */
 function finishSeries(
-  raw: readonly { key: string; tokens: number }[],
-  label: (key: string) => string,
-  title: (key: string, display: string) => string,
+  raw: readonly { key: string; tokens: number; label: string }[],
+  title: (key: string, exact: string) => string,
 ): UsageSeriesView {
   const peak = raw.reduce((max, entry) => Math.max(max, entry.tokens), 0)
   const points = raw.map((entry, index) => ({
     key: entry.key,
-    label: label(entry.key),
-    title: title(entry.key, formatCompactCount(entry.tokens)),
+    label: entry.label,
+    title: title(entry.key, formatExactCount(entry.tokens)),
     display: formatCompactCount(entry.tokens),
     x: Math.round((index / (raw.length - 1)) * 100),
     y: peak === 0 ? 0 : Math.round((entry.tokens / peak) * 100),
     active: entry.tokens > 0,
   }))
-  return { points, peak: formatCompactCount(peak), axis: seriesAxis(points) }
+  return { points, peak: formatCompactCount(peak), half: formatCompactCount(peak / 2), axis: seriesAxis(points) }
 }
 
 /** Roughly SERIES_AXIS_LABELS evenly spaced bucket labels, always ending at the newest. */
@@ -279,6 +353,8 @@ function shapeRoutes(totals: UsageLedgerTotals): readonly UsageRouteView[] {
     requests: formatCompactCount(entry.requests),
     tokens: formatCompactCount(entry.totalTokens),
     share: shareOf(entry.totalTokens, largest),
+    exact: formatExactCount(entry.totalTokens),
+    shareOfTotal: shareOf(entry.totalTokens, totals.totalTokens),
   }))
 }
 
@@ -289,7 +365,7 @@ function sessionLabel(sessionId: string): string {
 }
 
 /** Session rows capped for the table, most-used first (the fold's order). */
-function shapeSessions(rows: readonly UsageLedgerSessionTotals[]): readonly UsageSessionView[] {
+function shapeSessions(rows: readonly UsageLedgerSessionTotals[], totalTokens: number): readonly UsageSessionView[] {
   const capped = rows.slice(0, DISPLAYED_SESSIONS)
   const largest = capped[0]?.totalTokens ?? 0
   return capped.map(entry => ({
@@ -298,6 +374,8 @@ function shapeSessions(rows: readonly UsageLedgerSessionTotals[]): readonly Usag
     requests: formatCompactCount(entry.requests),
     tokens: formatCompactCount(entry.totalTokens),
     share: shareOf(entry.totalTokens, largest),
+    exact: formatExactCount(entry.totalTokens),
+    shareOfTotal: shareOf(entry.totalTokens, totalTokens),
     lastActivity: new Date(entry.lastActivity).toISOString().slice(0, 10),
   }))
 }

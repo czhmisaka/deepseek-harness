@@ -50,6 +50,9 @@ const copy: Record<string, string> = {
   intro: 'Whole-deployment token accounting.',
   refresh: 'Refresh',
   empty: 'No token usage recorded yet.',
+  loading: 'Loading…',
+  trendEmptyRange: 'No usage in this range — try another range.',
+  shareOfTotalTitle: 'Share of all usage: {percent}%',
   loadFailed: 'Usage data is unavailable',
   retry: 'Retry',
   totalsHeading: 'All time',
@@ -127,7 +130,7 @@ describe('usage section', () => {
   it('keeps the loading copy while the first fetch is in flight', async () => {
     let resolveLoad: ((outcome: UsageLoad) => void) | undefined
     const screen = render(<UsageSection {...propsFor(() => new Promise<UsageLoad>((resolve) => { resolveLoad = resolve }))} />)
-    expect(screen.getByText('No token usage recorded yet.')).toBeDefined()
+    expect(screen.getByText('Loading…')).toBeDefined()
     await act(async () => {
       resolveLoad?.({ ok: true, snapshot: snapshotOf({}) })
       await Promise.resolve()

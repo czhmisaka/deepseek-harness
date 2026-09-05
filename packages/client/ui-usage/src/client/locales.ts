@@ -27,6 +27,9 @@ export type UsageLocaleKey =
   | 'range7d'
   | 'range30d'
   | 'trendEmpty'
+  | 'trendEmptyRange'
+  | 'loading'
+  | 'shareOfTotalTitle'
   | 'routesHeading'
   | 'routesEmpty'
   | 'routeNameColumn'
@@ -72,6 +75,9 @@ export const en: Record<UsageLocaleKey, string> = {
   range7d: '7 days',
   range30d: '30 days',
   trendEmpty: 'Not enough history for a trend yet.',
+  trendEmptyRange: 'No usage in this range — try another range.',
+  loading: 'Loading…',
+  shareOfTotalTitle: 'Share of all usage: {percent}%',
   routesHeading: 'By model',
   routesEmpty: 'No routes recorded.',
   routeNameColumn: 'Route',
@@ -118,6 +124,9 @@ export const zh: Record<UsageLocaleKey, string> = {
   range7d: '7 天',
   range30d: '30 天',
   trendEmpty: '历史还不足以为你画出走势。',
+  trendEmptyRange: '这个区间没有用量——试试其他区间。',
+  loading: '加载中…',
+  shareOfTotalTitle: '占全部用量的 {percent}%',
   routesHeading: '按模型',
   routesEmpty: '暂无路由记录。',
   routeNameColumn: '路由',

@@ -109,7 +109,7 @@ describe('shapeDashboard', () => {
       'requests', 'input', 'cacheRead', 'cacheWrite', 'output', 'total',
     ])
     expect(view.figures.find(figure => figure.id === 'input')?.value).toBe('1.5K')
-    expect(view.routes[0]).toEqual({ route: 'p0/m', requests: '1', tokens: '1', share: 100 })
+    expect(view.routes[0]).toEqual({ route: 'p0/m', requests: '1', tokens: '1', share: 100, exact: '1', shareOfTotal: 0 })
     expect(view.ledgerPath).toBe('~/.dsh/usage/usage.jsonl')
   })
 
@@ -119,7 +119,7 @@ describe('shapeDashboard', () => {
 
   it('selects the today entry when one falls on the current day', () => {
     const view = viewOf({ byDay: [day(todayKey(), 500)] })
-    expect(view.today).toEqual({ requests: '3', total: '500' })
+    expect(view.today).toEqual({ requests: '3', total: '500', exact: '500' })
   })
 
   it('returns an all-zero series before any recorded day', () => {
@@ -193,6 +193,8 @@ describe('shapeDashboard', () => {
       requests: '3',
       tokens: '5K',
       share: 100,
+      exact: '5,000',
+      shareOfTotal: 2,
       lastActivity: '2026-09-05',
     })
     expect(view.sessions[1]).toMatchObject({ label: 'short', share: Math.round((10 / 5000) * 100) })

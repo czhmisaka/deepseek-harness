@@ -83,7 +83,7 @@ export function UsageSection({ t, load }: UsageSectionProps) {
         <button type='button' className={css.refresh} onClick={refresh}>{t('refresh')}</button>
       </div>
       <p className={css.intro}>{t('intro')}</p>
-      {state.phase === 'loading' && <p className={css.muted}>{t('empty')}</p>}
+      {state.phase === 'loading' && <p className={css.muted}>{t('loading')}</p>}
       {state.phase === 'failed' && (
         <p className={css.error}>
           {t('loadFailed')}
@@ -110,7 +110,7 @@ function Dashboard({ t, view, range, onRange }: {
         <h3 className={css.cardHeading}>{t('totalsHeading')}</h3>
         <div className={css.figures}>
           {view.figures.map(figure => (
-            <div key={figure.id} className={css.figure} data-figure={figure.id}>
+            <div key={figure.id} className={css.figure} data-figure={figure.id} title={figure.exact}>
               <span className={css.figureHead}>
                 <span className={css.figureDot} data-figure={figure.id} />
                 <span className={css.figureLabel}>{figure.label}</span>
@@ -119,6 +119,19 @@ function Dashboard({ t, view, range, onRange }: {
             </div>
           ))}
         </div>
+        {view.composition.length > 0 && (
+          <div className={css.composition} role='img' aria-label={t('totalsHeading')}>
+            {view.composition.map(segment => (
+              <span
+                key={segment.id}
+                className={css.compositionSegment}
+                data-figure={segment.id}
+                style={{ width: String(segment.percent) + '%' }}
+                title={segment.label + ' · ' + segment.exact + ' · ' + String(segment.percent) + '%'}
+              />
+            ))}
+          </div>
+        )}
         <p className={css.ledgerPath}>
           {t('ledgerPathLabel')}
           {': '}
@@ -130,7 +143,7 @@ function Dashboard({ t, view, range, onRange }: {
         {view.today === undefined
           ? <p className={css.muted}>{t('todayNone')}</p>
           : (
-            <p className={css.todayLine}>
+            <p className={css.todayLine} title={view.today.exact}>
               <strong className={css.todayTotal}>{view.today.total}</strong>
               {' · '}
               {view.today.requests}
@@ -155,7 +168,7 @@ function Dashboard({ t, view, range, onRange }: {
           </div>
         </div>
         {view.series.points.every(point => !point.active)
-          ? <p className={css.muted}>{t('trendEmpty')}</p>
+          ? <p className={css.muted}>{view.hasUsage ? t('trendEmptyRange') : t('trendEmpty')}</p>
           : <TimeChart series={view.series} label={t('trendHeading')} />}
       </section>
       <section className={css.card}>
@@ -176,7 +189,10 @@ function Dashboard({ t, view, range, onRange }: {
               </thead>
               <tbody>
                 {view.routes.map(row => (
-                  <tr key={row.route}>
+                  <tr
+                    key={row.route}
+                    title={row.tokens + ' · ' + t('shareOfTotalTitle').replace('{percent}', String(row.shareOfTotal))}
+                  >
                     <td>{row.route}</td>
                     <td>{row.requests}</td>
                     <td>{row.tokens}</td>
@@ -211,7 +227,10 @@ function Dashboard({ t, view, range, onRange }: {
               </thead>
               <tbody>
                 {view.sessions.map(row => (
-                  <tr key={row.sessionId} title={row.sessionId}>
+                  <tr
+                    key={row.sessionId}
+                    title={row.sessionId + ' · ' + row.exact + ' · ' + t('shareOfTotalTitle').replace('{percent}', String(row.shareOfTotal))}
+                  >
                     <td>{row.label}</td>
                     <td>{row.requests}</td>
                     <td>{row.tokens}</td>
@@ -240,7 +259,12 @@ function toSvgY(y: number): number {
   return CHART_HEIGHT - 2 - (y / 100) * (CHART_HEIGHT - 4)
 }
 
-/** The SVG time chart: an area over evenly spaced UTC buckets with per-bucket hover titles. */
+/**
+ * The SVG time chart: an area over evenly spaced UTC buckets with per-bucket
+ * hover titles, a half-peak gridline for reading intermediate values, and an
+ * HTML peak marker (an SVG circle would stretch into an ellipse under the
+ * non-uniform viewBox scaling).
+ */
 function TimeChart({ series, label }: { series: UsageSeriesView; label: string }) {
   const hitWidth = 100 / series.points.length
   const line = series.points.map(point => String(point.x) + ',' + String(toSvgY(point.y))).join(' ')
@@ -251,44 +275,45 @@ function TimeChart({ series, label }: { series: UsageSeriesView; label: string }
   return (
     <div className={css.trendChartWrap}>
       <span className={css.trendPeak}>{series.peak}</span>
-      <svg
-        className={css.trendChart}
-        viewBox={'0 0 100 ' + String(CHART_HEIGHT)}
-        preserveAspectRatio='none'
-        role='img'
-        aria-label={label}
-      >
-        <defs>
-          <linearGradient id='dsh-usage-area' x1='0' y1='0' x2='0' y2='1'>
-            <stop offset='0%' className={css.trendAreaStopTop} />
-            <stop offset='100%' className={css.trendAreaStopBottom} />
-          </linearGradient>
-        </defs>
-        <polygon className={css.trendArea} points={'0,' + String(CHART_HEIGHT) + ' ' + line + ' 100,' + String(CHART_HEIGHT)} />
-        <polyline className={css.trendLine} points={line} />
+      <div className={css.trendPlot}>
+        <svg
+          className={css.trendChart}
+          viewBox={'0 0 100 ' + String(CHART_HEIGHT)}
+          preserveAspectRatio='none'
+          role='img'
+          aria-label={label}
+        >
+          <defs>
+            <linearGradient id='dsh-usage-area' x1='0' y1='0' x2='0' y2='1'>
+              <stop offset='0%' className={css.trendAreaStopTop} />
+              <stop offset='100%' className={css.trendAreaStopBottom} />
+            </linearGradient>
+          </defs>
+          <polygon className={css.trendArea} points={'0,' + String(CHART_HEIGHT) + ' ' + line + ' 100,' + String(CHART_HEIGHT)} />
+          <line className={css.trendGridline} x1={0} x2={100} y1={toSvgY(50)} y2={toSvgY(50)} />
+          <polyline className={css.trendLine} points={line} />
+          {series.points.map(point => (
+            <rect
+              key={point.key}
+              className={css.trendHit}
+              x={Math.max(0, point.x - hitWidth / 2)}
+              y={0}
+              width={hitWidth}
+              height={CHART_HEIGHT}
+            >
+              <title>{point.title}</title>
+            </rect>
+          ))}
+        </svg>
         {peak !== undefined && peak.active && (
-          <circle
+          <span
             className={css.trendPeakDot}
-            cx={peak.x}
-            cy={toSvgY(peak.y)}
-            r={1.1}
-          >
-            <title>{peak.title}</title>
-          </circle>
+            style={{ left: String(peak.x) + '%', top: String((toSvgY(peak.y) / CHART_HEIGHT) * 100) + '%' }}
+            title={peak.title}
+          />
         )}
-        {series.points.map(point => (
-          <rect
-            key={point.key}
-            className={css.trendHit}
-            x={Math.max(0, point.x - hitWidth / 2)}
-            y={0}
-            width={hitWidth}
-            height={CHART_HEIGHT}
-          >
-            <title>{point.title}</title>
-          </rect>
-        ))}
-      </svg>
+        <span className={css.trendHalf}>{series.half}</span>
+      </div>
       <div className={css.trendAxis}>
         {series.axis.map((axis, index) => (
           <span
