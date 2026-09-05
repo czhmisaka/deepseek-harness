@@ -73,7 +73,34 @@
   gap: 2px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: var(--dsw-alias-fill-l1);
+  background: var(--dsw-alias-bg-module-platform);
+}
+
+.figureHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.figureDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--dsw-alias-state-business-primary);
+}
+
+.figureDot[data-figure='input'],
+.figureDot[data-figure='cacheWrite'] {
+  background: var(--dsw-alias-state-warn-primary);
+}
+
+.figureDot[data-figure='cacheRead'] {
+  background: var(--dsw-alias-state-success-primary);
+}
+
+.figureDot[data-figure='output'] {
+  background: var(--dsw-alias-state-error-secondary);
 }
 
 .figureValue {
@@ -82,8 +109,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+.figure[data-figure='total'] {
+  background: var(--dsw-alias-state-business-tertiary);
+}
+
+.figure[data-figure='total'] .figureDot {
+  background: var(--dsw-alias-state-business-primary);
+}
+
 .figure[data-figure='total'] .figureValue {
-  color: var(--dsw-alias-label-accent);
+  color: var(--dsw-alias-state-business-primary);
 }
 
 .ledgerPath {
@@ -98,6 +133,10 @@
   gap: 8px;
   margin: 0;
   font-size: 14px;
+}
+
+.todayTotal {
+  color: var(--dsw-alias-state-business-primary);
 }
 
 .cardHead {
@@ -129,9 +168,9 @@
 }
 
 .rangeButton[data-active='true'] {
-  color: var(--dsw-alias-label-primary);
-  border-color: var(--dsw-alias-border-l3);
-  background: var(--dsw-alias-fill-l1);
+  color: var(--dsw-alias-label-primary-foreground);
+  border-color: var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-state-business-primary);
 }
 
 .trendChartWrap {
@@ -143,7 +182,7 @@
 .trendPeak {
   align-self: flex-end;
   font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--dsw-alias-state-warn-label);
   font-variant-numeric: tabular-nums;
 }
 
@@ -153,15 +192,31 @@
   height: 96px;
 }
 
+.trendAreaStopTop {
+  stop-color: var(--dsw-static-deepseek-450);
+  stop-opacity: 0.4;
+}
+
+.trendAreaStopBottom {
+  stop-color: var(--dsw-static-deepseek-450);
+  stop-opacity: 0;
+}
+
 .trendArea {
-  fill: var(--dsw-alias-fill-accent);
-  fill-opacity: 0.35;
+  fill: url(#dsh-usage-area);
 }
 
 .trendLine {
   fill: none;
-  stroke: var(--dsw-alias-label-accent);
+  stroke: var(--dsw-alias-state-business-primary);
   stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.trendPeakDot {
+  fill: var(--dsw-alias-state-warn-primary);
+  stroke: var(--dsw-alias-bg-base);
+  stroke-width: 0.4;
   vector-effect: non-scaling-stroke;
 }
 
@@ -211,6 +266,42 @@
   color: var(--dsw-alias-label-tertiary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.shareColumn {
+  width: 120px;
+}
+
+.shareCell {
+  min-width: 120px;
+}
+
+.shareTrack {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  overflow: hidden;
+}
+
+.shareBar {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--dsw-static-deepseek-450), var(--dsw-alias-state-business-primary));
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .code {

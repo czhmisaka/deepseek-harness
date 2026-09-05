@@ -71,6 +71,8 @@ export interface UsageRouteView {
   readonly requests: string
   /** Humanized total tokens. */
   readonly tokens: string
+  /** Token share against the table's largest row, 0-100, for the share bar. */
+  readonly share: number
 }
 
 /** One per-session table row. */
@@ -83,6 +85,8 @@ export interface UsageSessionView {
   readonly requests: string
   /** Humanized total tokens. */
   readonly tokens: string
+  /** Token share against the table's largest row, 0-100, for the share bar. */
+  readonly share: number
   /** UTC calendar day (YYYY-MM-DD) of the session's newest record. */
   readonly lastActivity: string
 }
@@ -257,12 +261,24 @@ function seriesAxis(points: readonly UsageSeriesPoint[]): readonly UsageSeriesAx
   return axis
 }
 
+/**
+ * Token share against the table's largest row, 0-100. Rows arrive sorted
+ * largest first, so the first row is the 100 percent reference.
+ */
+function shareOf(entryTokens: number, largestTokens: number): number {
+  if (largestTokens <= 0) return 0
+  return Math.round((entryTokens / largestTokens) * 100)
+}
+
 /** Route rows capped for the table, most-used first. */
 function shapeRoutes(totals: UsageLedgerTotals): readonly UsageRouteView[] {
-  return totals.byModel.slice(0, DISPLAYED_ROUTES).map(entry => ({
+  const rows = totals.byModel.slice(0, DISPLAYED_ROUTES)
+  const largest = rows[0]?.totalTokens ?? 0
+  return rows.map(entry => ({
     route: entry.provider + '/' + entry.model,
     requests: formatCompactCount(entry.requests),
     tokens: formatCompactCount(entry.totalTokens),
+    share: shareOf(entry.totalTokens, largest),
   }))
 }
 
@@ -274,11 +290,14 @@ function sessionLabel(sessionId: string): string {
 
 /** Session rows capped for the table, most-used first (the fold's order). */
 function shapeSessions(rows: readonly UsageLedgerSessionTotals[]): readonly UsageSessionView[] {
-  return rows.slice(0, DISPLAYED_SESSIONS).map(entry => ({
+  const capped = rows.slice(0, DISPLAYED_SESSIONS)
+  const largest = capped[0]?.totalTokens ?? 0
+  return capped.map(entry => ({
     sessionId: entry.sessionId,
     label: sessionLabel(entry.sessionId),
     requests: formatCompactCount(entry.requests),
     tokens: formatCompactCount(entry.totalTokens),
+    share: shareOf(entry.totalTokens, largest),
     lastActivity: new Date(entry.lastActivity).toISOString().slice(0, 10),
   }))
 }

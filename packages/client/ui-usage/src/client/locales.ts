@@ -32,6 +32,7 @@ export type UsageLocaleKey =
   | 'routeNameColumn'
   | 'routeRequestsColumn'
   | 'routeTokensColumn'
+  | 'routeShareColumn'
   | 'ledgerPathLabel'
   | 'moreRoutes'
   | 'sessionsHeading'
@@ -39,6 +40,7 @@ export type UsageLocaleKey =
   | 'sessionColumn'
   | 'sessionRequestsColumn'
   | 'sessionTokensColumn'
+  | 'sessionShareColumn'
   | 'sessionActivityColumn'
   | 'moreSessions'
 
@@ -75,6 +77,7 @@ export const en: Record<UsageLocaleKey, string> = {
   routeNameColumn: 'Route',
   routeRequestsColumn: 'Requests',
   routeTokensColumn: 'Total tokens',
+  routeShareColumn: 'Share of the largest route',
   ledgerPathLabel: 'Ledger file',
   moreRoutes: '{count} more routes',
   sessionsHeading: 'By session',
@@ -82,6 +85,7 @@ export const en: Record<UsageLocaleKey, string> = {
   sessionColumn: 'Session',
   sessionRequestsColumn: 'Requests',
   sessionTokensColumn: 'Total tokens',
+  sessionShareColumn: 'Share of the largest session',
   sessionActivityColumn: 'Last activity',
   moreSessions: '{count} more sessions',
 }
@@ -119,6 +123,7 @@ export const zh: Record<UsageLocaleKey, string> = {
   routeNameColumn: '路由',
   routeRequestsColumn: '请求数',
   routeTokensColumn: '总 tokens',
+  routeShareColumn: '占最大路由的比例',
   ledgerPathLabel: '账本文件',
   moreRoutes: '还有 {count} 条路由',
   sessionsHeading: '按会话',
@@ -126,6 +131,7 @@ export const zh: Record<UsageLocaleKey, string> = {
   sessionColumn: '会话',
   sessionRequestsColumn: '请求数',
   sessionTokensColumn: '总 tokens',
+  sessionShareColumn: '占最大会话的比例',
   sessionActivityColumn: '最近活动',
   moreSessions: '还有 {count} 个会话',
 }

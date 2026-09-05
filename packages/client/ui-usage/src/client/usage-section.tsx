@@ -5,7 +5,7 @@ import type {
   InjectFace, PropsLocale, PropsRuntime,
 } from '@deepseek-ai/dsh-client-ui-slots'
 import type { UsageLedgerSnapshot } from '@deepseek-ai/dsh-api-remotes/client'
-import type { UsageDashboardView, UsageSeriesView, SeriesRange } from './shaping.ts'
+import type { UsageDashboardView, UsageSeriesPoint, UsageSeriesView, SeriesRange } from './shaping.ts'
 import { SERIES_RANGES, shapeDashboard } from './shaping.ts'
 import type { UsageLocaleKey } from './locales.ts'
 import css from './UsageSection.module.css'
@@ -111,7 +111,10 @@ function Dashboard({ t, view, range, onRange }: {
         <div className={css.figures}>
           {view.figures.map(figure => (
             <div key={figure.id} className={css.figure} data-figure={figure.id}>
-              <span className={css.figureLabel}>{figure.label}</span>
+              <span className={css.figureHead}>
+                <span className={css.figureDot} data-figure={figure.id} />
+                <span className={css.figureLabel}>{figure.label}</span>
+              </span>
               <span className={css.figureValue}>{figure.value}</span>
             </div>
           ))}
@@ -128,7 +131,7 @@ function Dashboard({ t, view, range, onRange }: {
           ? <p className={css.muted}>{t('todayNone')}</p>
           : (
             <p className={css.todayLine}>
-              <strong>{view.today.total}</strong>
+              <strong className={css.todayTotal}>{view.today.total}</strong>
               {' · '}
               {view.today.requests}
             </p>
@@ -166,6 +169,9 @@ function Dashboard({ t, view, range, onRange }: {
                   <th scope='col'>{t('routeNameColumn')}</th>
                   <th scope='col'>{t('routeRequestsColumn')}</th>
                   <th scope='col'>{t('routeTokensColumn')}</th>
+                  <th scope='col' className={css.shareColumn}>
+                    <span className={css.visuallyHidden}>{t('routeShareColumn')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -174,6 +180,11 @@ function Dashboard({ t, view, range, onRange }: {
                     <td>{row.route}</td>
                     <td>{row.requests}</td>
                     <td>{row.tokens}</td>
+                    <td className={css.shareCell}>
+                      <span className={css.shareTrack}>
+                        <span className={css.shareBar} style={{ width: String(row.share) + '%' }} />
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -192,6 +203,9 @@ function Dashboard({ t, view, range, onRange }: {
                   <th scope='col'>{t('sessionColumn')}</th>
                   <th scope='col'>{t('sessionRequestsColumn')}</th>
                   <th scope='col'>{t('sessionTokensColumn')}</th>
+                  <th scope='col' className={css.shareColumn}>
+                    <span className={css.visuallyHidden}>{t('sessionShareColumn')}</span>
+                  </th>
                   <th scope='col'>{t('sessionActivityColumn')}</th>
                 </tr>
               </thead>
@@ -201,6 +215,11 @@ function Dashboard({ t, view, range, onRange }: {
                     <td>{row.label}</td>
                     <td>{row.requests}</td>
                     <td>{row.tokens}</td>
+                    <td className={css.shareCell}>
+                      <span className={css.shareTrack}>
+                        <span className={css.shareBar} style={{ width: String(row.share) + '%' }} />
+                      </span>
+                    </td>
                     <td className={css.sessionActivity}>{row.lastActivity}</td>
                   </tr>
                 ))}
@@ -225,6 +244,10 @@ function toSvgY(y: number): number {
 function TimeChart({ series, label }: { series: UsageSeriesView; label: string }) {
   const hitWidth = 100 / series.points.length
   const line = series.points.map(point => String(point.x) + ',' + String(toSvgY(point.y))).join(' ')
+  const peak = series.points.reduce<UsageSeriesPoint | undefined>(
+    (best, point) => (best === undefined || point.y > best.y ? point : best),
+    undefined,
+  )
   return (
     <div className={css.trendChartWrap}>
       <span className={css.trendPeak}>{series.peak}</span>
@@ -235,8 +258,24 @@ function TimeChart({ series, label }: { series: UsageSeriesView; label: string }
         role='img'
         aria-label={label}
       >
+        <defs>
+          <linearGradient id='dsh-usage-area' x1='0' y1='0' x2='0' y2='1'>
+            <stop offset='0%' className={css.trendAreaStopTop} />
+            <stop offset='100%' className={css.trendAreaStopBottom} />
+          </linearGradient>
+        </defs>
         <polygon className={css.trendArea} points={'0,' + String(CHART_HEIGHT) + ' ' + line + ' 100,' + String(CHART_HEIGHT)} />
         <polyline className={css.trendLine} points={line} />
+        {peak !== undefined && peak.active && (
+          <circle
+            className={css.trendPeakDot}
+            cx={peak.x}
+            cy={toSvgY(peak.y)}
+            r={1.1}
+          >
+            <title>{peak.title}</title>
+          </circle>
+        )}
         {series.points.map(point => (
           <rect
             key={point.key}

@@ -109,7 +109,7 @@ describe('shapeDashboard', () => {
       'requests', 'input', 'cacheRead', 'cacheWrite', 'output', 'total',
     ])
     expect(view.figures.find(figure => figure.id === 'input')?.value).toBe('1.5K')
-    expect(view.routes[0]).toEqual({ route: 'p0/m', requests: '1', tokens: '1' })
+    expect(view.routes[0]).toEqual({ route: 'p0/m', requests: '1', tokens: '1', share: 100 })
     expect(view.ledgerPath).toBe('~/.dsh/usage/usage.jsonl')
   })
 
@@ -192,9 +192,10 @@ describe('shapeDashboard', () => {
       label: '63e82d3e…',
       requests: '3',
       tokens: '5K',
+      share: 100,
       lastActivity: '2026-09-05',
     })
-    expect(view.sessions[1]?.label).toBe('short')
+    expect(view.sessions[1]).toMatchObject({ label: 'short', share: Math.round((10 / 5000) * 100) })
   })
 
   it('keeps at most ten session rows and summarizes the remainder', () => {
