@@ -33,8 +33,8 @@ export function mountMatrixRain(themeName: string): void {
   layer.setAttribute('data-dsg-matrix-rain-wallpaper', '')
   const rain = document.createElement('matrix-rain')
   rain.setAttribute('theme', themeName)
-  rain.setAttribute('font-size', '16')
-  rain.setAttribute('render-scale', '0.75')
+  rain.setAttribute('font-size', '11')
+  rain.setAttribute('render-scale', '0.8')
   layer.appendChild(rain)
   document.body.prepend(layer)
 }
