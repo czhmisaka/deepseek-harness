@@ -295,6 +295,10 @@
     - id: ui-settings-plugins
       name: '@deepseek-ai/dsh-client-ui-settings-plugins'
 
+    # Usage: the settings section rendering the whole-deployment token ledger.
+    - id: ui-usage
+      name: '@deepseek-ai/dsh-client-ui-usage'
+
     # Plan control: the composer plan seat over the plan projection + /plan channel.
     - id: ui-plan
       name: '@deepseek-ai/dsh-client-ui-plan'

@@ -323,6 +323,16 @@
     - id: token-meter
       name: '@deepseek-ai/dsh-token-meter'
 
+    # Durable cross-session token usage ledger: every usage-reporting
+    # assistant/message event appends one JSON line under the harness home in
+    # real time, and /usage serves the whole-ledger totals. Multiple profile
+    # processes sharing one harness home append to the same file; each line is
+    # one atomic O_APPEND write.
+    - id: usage-ledger
+      name: '@deepseek-ai/dsh-usage-ledger'
+      config:
+        path: !!js dshHomePath('usage', 'usage.jsonl')
+
     - id: compaction-basic
       name: '@deepseek-ai/dsh-compaction-basic'
 

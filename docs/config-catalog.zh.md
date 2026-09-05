@@ -3101,6 +3101,26 @@ export interface Config {
 
 来源：[`packages/typert/loader/src/index.ts:47`](../packages/typert/loader/src/index.ts)
 
+<a id="deepseek-aidsh-usage-ledger"></a>
+
+## `@deepseek-ai/dsh-usage-ledger`
+
+```ts config-catalog
+/** Loader config: where the append-only usage ledger file lives. */
+export interface Config {
+  /**
+   * Absolute path of the append-only JSONL ledger file. Required (no default):
+   * a default would scatter usage data beside whatever the process treats as
+   * its working directory. The shipped base bundle supplies
+   * `dshHomePath('usage', 'usage.jsonl')`. An existing target must be a
+   * regular file; the parent directory is created at load when missing.
+   */
+  path: string
+}
+```
+
+来源：[`packages/llm/usage-ledger/src/index.ts:36`](../packages/llm/usage-ledger/src/index.ts)
+
 <a id="deepseek-aidsh-user-approval"></a>
 
 ## `@deepseek-ai/dsh-user-approval`
