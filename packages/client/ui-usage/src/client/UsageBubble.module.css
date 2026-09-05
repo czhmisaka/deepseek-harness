@@ -1,17 +1,17 @@
-/* Usage bubble: fixed bottom-right chrome inside the shell overlay layer. */
+/* Usage bubble: draggable fixed chrome inside the shell overlay layer. */
 
+/* The layer is a non-interactive viewport cover; children opt into pointer events. */
 .bubbleLayer {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  inset: 0;
   z-index: 60;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  pointer-events: none;
 }
 
 .bubble {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -25,6 +25,9 @@
   font-size: 12px;
   line-height: 16px;
   cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
   box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
 }
 
@@ -59,6 +62,9 @@
 }
 
 .panel {
+  position: fixed;
+  right: 18px;
+  bottom: 64px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -69,6 +75,7 @@
   background: var(--dsw-alias-fill-l1);
   box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
   color: var(--dsw-alias-label-primary);
+  pointer-events: auto;
 }
 
 .panelHead {

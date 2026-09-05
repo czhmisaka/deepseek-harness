@@ -2,7 +2,7 @@
 /** Component behavior of the usage bubble overlay. */
 
 import { act } from 'react'
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { UsageBubble } from '../src/client/usage-bubble.tsx'
 import type { UsageLoad } from '../src/client/usage-section.tsx'
@@ -59,6 +59,29 @@ describe('usage bubble', () => {
     expect(screen.getByText('Ledger file: ~/.dsh/usage/usage.jsonl')).toBeDefined()
   })
 
+  it('drags the bubble to a new viewport position and persists it', async () => {
+    const screen = render(<UsageBubble {...propsFor(async () => ({ ok: true as const, snapshot: snapshotOf() }))} />)
+    await act(async () => { await Promise.resolve() })
+    const bubble = screen.getByRole('button', { name: 'Token usage bubble' })
+    fireEvent.pointerDown(bubble, { pointerId: 1, isPrimary: true, button: 0, clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(bubble, { pointerId: 1, clientX: 240, clientY: 180 })
+    fireEvent.pointerUp(bubble, { pointerId: 1, clientX: 240, clientY: 180 })
+    expect(bubble.style.left).toBe('140px')
+    expect(bubble.style.top).toBe('80px')
+    expect(JSON.parse(localStorage.getItem('dsh-usage-bubble-pos') ?? '{}')).toMatchObject({ x: 140, y: 80 })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('treats a sub-threshold pointer sequence as a click and expands the panel', async () => {
+    const screen = render(<UsageBubble {...propsFor(async () => ({ ok: true as const, snapshot: snapshotOf() }))} />)
+    await act(async () => { await Promise.resolve() })
+    const bubble = screen.getByRole('button', { name: 'Token usage bubble' })
+    fireEvent.pointerDown(bubble, { pointerId: 1, isPrimary: true, button: 0, clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(bubble, { pointerId: 1, clientX: 101, clientY: 101 })
+    fireEvent.pointerUp(bubble, { pointerId: 1, clientX: 101, clientY: 101 })
+    fireEvent.click(bubble)
+    expect(screen.getByRole('dialog')).toBeDefined()
+  })
   it('shows the sigma mark and a failed state without a panel', async () => {
     const screen = render(<UsageBubble {...propsFor(async () => ({ ok: false as const, code: 'gateway/internal', detail: 'HTTP 404' }))} />)
     await act(async () => { await Promise.resolve() })
