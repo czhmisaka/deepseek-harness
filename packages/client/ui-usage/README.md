@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-client-ui-usage` is the browser half of the token usage ledger: it registers the **Usage** settings section and renders the whole-deployment dashboard — all-time figures, today's totals, a seven-day trend chart, and the per-route table — from `ctx.remote.usage.totals()`. The section fetches on mount and on the user's Refresh affordance; the ledger changes on every model call, and the button is the currency affordance. It owns no settings document, writes nothing, and adds no model-visible surface.
+`@deepseek-ai/dsh-client-ui-usage` is the browser half of the token usage ledger: it registers the **Usage** settings section and renders the whole-deployment dashboard — all-time figures, today's totals, a usage-over-time chart, the per-route table, and the per-session table — from `ctx.remote.usage.totals()`. The section fetches on mount and on the user's Refresh affordance; the ledger changes on every model call, and the button is the currency affordance. It owns no settings document, writes nothing, and adds no model-visible surface.
 
 ## Table of Contents
 
@@ -36,8 +36,9 @@ Mount the plugin in the web composition beside the settings shell and the Remote
 
 - **All time** — request count and the four disjoint token buckets plus the billed total, in compact humanized form.
 - **Today (UTC)** — today's requests and total, or a no-usage note.
-- **Last 7 days** — relative bars scaled against the peak recorded day.
+- **Usage over time** — a calendar-aligned area chart of daily totals with a 7/30-day range toggle; days without usage read as zero, and the axis always ends at today (UTC).
 - **By model** — the top eight routes with requests and total tokens, plus a remainder line.
+- **By session** — the top ten sessions with requests, total tokens, and each session's latest activity day (UTC), plus a remainder line; the row's hover title carries the full session id.
 - **Ledger file** — the symbolic ledger location (`~/.dsh/...` or `$DSH_HOME/...`).
 
 A failed Remote call renders the failure code with a Refresh affordance; a local fault keeps crashing per the Remote discipline.
@@ -55,8 +56,8 @@ A failed Remote call renders the failure code with a Refresh affordance; a local
 | File | Role |
 |---|---|
 | [`src/client/index.ts`](src/client/index.ts) | Registers the dictionaries and the `settings.section` entry with the load face |
-| [`src/client/usage-section.tsx`](src/client/usage-section.tsx) | The section component: fetch state, figures grid, trend bars, route table |
-| [`src/client/shaping.ts`](src/client/shaping.ts) | Pure snapshot-to-view shaping: compact counts, trend scaling, route capping |
+| [`src/client/usage-section.tsx`](src/client/usage-section.tsx) | The section component: fetch state, figures grid, time chart, route and session tables |
+| [`src/client/shaping.ts`](src/client/shaping.ts) | Pure snapshot-to-view shaping: compact counts, the daily series, route and session capping |
 | [`src/client/locales.ts`](src/client/locales.ts) | The typed zh/en dictionaries |
 
 ### Data flow
@@ -92,8 +93,9 @@ No effect. The section contributes no request content, so cache identity is unch
 These limits define where the dashboard stops and future work begins. They are current package constraints, not a comparison of display approaches or a task backlog.
 
 - **No live updates** — the panel fetches on mount and on Refresh; a live-updating counter is deferred until a consumer needs it, because the ledger changes on every model call.
-- **Trend is the last seven recorded days** — days without usage are absent from the ledger, so the chart spans recorded days rather than calendar days.
+- **Time resolution is UTC days** — the ledger folds per UTC calendar day, so the chart cannot split a day into hours until a per-hour fold bucket exists.
 - **Route table is capped at eight rows** — the remainder renders as a count; per-route pagination belongs to a fuller explorer surface.
+- **Session rows show ids, not titles** — the ledger records session ids only, so the table labels carry the id prefix and the hover title the full id; human-readable session titles belong to a richer query surface.
 
 <a id="dev-note"></a>
 ### Dev Note

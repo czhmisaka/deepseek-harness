@@ -7,7 +7,7 @@
  */
 
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
-import type { UsageLedgerDayTotals, UsageLedgerModelTotals, UsageLedgerRecord, UsageLedgerTotals } from './types.ts'
+import type { UsageLedgerDayTotals, UsageLedgerModelTotals, UsageLedgerRecord, UsageLedgerSessionTotals, UsageLedgerTotals } from './types.ts'
 
 /** Mutable accumulator behind one totals value; not part of the public surface. */
 export interface UsageTotalsAccumulator {
@@ -20,6 +20,7 @@ export interface UsageTotalsAccumulator {
   lastRecordTime: number | null
   byModel: Map<string, UsageLedgerModelTotals>
   byDay: Map<string, UsageLedgerDayTotals>
+  bySession: Map<string, UsageLedgerSessionTotals>
 }
 
 /** Composite by-model map key; internal and never displayed. */
@@ -62,6 +63,7 @@ export function createAccumulator(): UsageTotalsAccumulator {
     lastRecordTime: null,
     byModel: new Map(),
     byDay: new Map(),
+    bySession: new Map(),
   }
 }
 
@@ -95,6 +97,19 @@ export function accumulateRecord(accumulator: UsageTotalsAccumulator, record: Us
     accumulator.byDay.set(day, dayTotals)
   }
   accumulateBucket(dayTotals, record)
+  let sessionTotals = accumulator.bySession.get(record.sessionId)
+  if (sessionTotals === undefined) {
+    sessionTotals = {
+      sessionId: record.sessionId,
+      requests: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0,
+      lastActivity: record.time,
+    }
+    accumulator.bySession.set(record.sessionId, sessionTotals)
+  }
+  accumulateBucket(sessionTotals, record)
+  if (record.time > sessionTotals.lastActivity) {
+    sessionTotals.lastActivity = record.time
+  }
 }
 
 /**
@@ -111,6 +126,10 @@ export function finishTotals(accumulator: UsageTotalsAccumulator): UsageLedgerTo
     return left.model < right.model ? -1 : 1
   })
   const byDay = [...accumulator.byDay.values()].sort((left, right) => left.day < right.day ? -1 : 1)
+  const bySession = [...accumulator.bySession.values()].sort((left, right) => {
+    if (right.totalTokens !== left.totalTokens) return right.totalTokens - left.totalTokens
+    return left.sessionId < right.sessionId ? -1 : 1
+  })
   return deepFreeze({
     requests: accumulator.requests,
     inputTokens: accumulator.inputTokens,
@@ -120,6 +139,7 @@ export function finishTotals(accumulator: UsageTotalsAccumulator): UsageLedgerTo
     totalTokens: accumulator.totalTokens,
     byModel,
     byDay,
+    bySession,
     lastRecordTime: accumulator.lastRecordTime,
   })
 }

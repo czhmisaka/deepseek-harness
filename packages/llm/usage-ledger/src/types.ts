@@ -65,6 +65,14 @@ export interface UsageLedgerDayTotals extends UsageLedgerBucket {
   day: string
 }
 
+/** All-time totals for one session id. */
+export interface UsageLedgerSessionTotals extends UsageLedgerBucket {
+  /** Id of the session that made the billed calls. */
+  sessionId: string
+  /** Append time of the session's newest record, epoch ms. */
+  lastActivity: number
+}
+
 /** Aggregated whole-ledger token usage, as served by ctx.usageLedger. */
 export interface UsageLedgerTotals {
   /** Usage-reporting assistant messages folded into these totals. */
@@ -83,6 +91,8 @@ export interface UsageLedgerTotals {
   byModel: readonly UsageLedgerModelTotals[]
   /** Per-UTC-day totals sorted ascending by day. */
   byDay: readonly UsageLedgerDayTotals[]
+  /** Per-session totals sorted by totalTokens descending, then sessionId ascending. */
+  bySession: readonly UsageLedgerSessionTotals[]
   /** Append time of the newest record, epoch ms; null when the ledger is empty. */
   lastRecordTime: number | null
 }

@@ -36,6 +36,7 @@ function snapshotOf(): UsageLedgerSnapshot {
     totalTokens: 4_200_000,
     byModel: [],
     byDay: [{ day: '2026-09-05', requests: 1, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 77_000 }],
+    bySession: [],
     lastRecordTime: 1000,
   }
   return { totals, ledgerDisplay: '~/.dsh/usage/usage.jsonl' }

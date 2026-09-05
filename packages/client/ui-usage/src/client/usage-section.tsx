@@ -5,8 +5,8 @@ import type {
   InjectFace, PropsLocale, PropsRuntime,
 } from '@deepseek-ai/dsh-client-ui-slots'
 import type { UsageLedgerSnapshot } from '@deepseek-ai/dsh-api-remotes/client'
-import type { UsageDashboardView } from './shaping.ts'
-import { shapeDashboard } from './shaping.ts'
+import type { UsageDashboardView, UsageSeriesView, SeriesRange } from './shaping.ts'
+import { SERIES_RANGES, shapeDashboard } from './shaping.ts'
 import type { UsageLocaleKey } from './locales.ts'
 import css from './UsageSection.module.css'
 
@@ -38,36 +38,36 @@ export type UsageSectionProps =
 type LoadState =
   | { readonly phase: 'loading' }
   | { readonly phase: 'failed'; readonly code: string; readonly detail: string }
-  | { readonly phase: 'ready'; readonly view: UsageDashboardView }
+  | { readonly phase: 'ready'; readonly snapshot: UsageLedgerSnapshot }
 
-/** Render one Usage page: totals grid, today, seven-day trend, and routes. */
+/** Render one Usage page: totals grid, today, usage-over-time chart, routes, and sessions. */
 export function UsageSection({ t, load }: UsageSectionProps) {
   const [state, setState] = useState<LoadState>({ phase: 'loading' })
+  // The chart range is a viewing choice: it re-shapes the held snapshot and never refetches.
+  const [range, setRange] = useState<SeriesRange>(7)
 
   const refresh = useCallback(() => {
     setState({ phase: 'loading' })
     void load().then((outcome) => {
-      if (outcome.ok) {
-        setState({
-          phase: 'ready',
-          view: shapeDashboard(outcome.snapshot, {
-            requests: t('requestsLabel'),
-            input: t('inputLabel'),
-            cacheRead: t('cacheReadLabel'),
-            cacheWrite: t('cacheWriteLabel'),
-            output: t('outputLabel'),
-            total: t('totalLabel'),
-          }),
-        })
-      } else {
-        setState({ phase: 'failed', code: outcome.code, detail: outcome.detail })
-      }
+      if (outcome.ok) setState({ phase: 'ready', snapshot: outcome.snapshot })
+      else setState({ phase: 'failed', code: outcome.code, detail: outcome.detail })
     })
-  }, [load, t])
+  }, [load])
 
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  const view = state.phase === 'ready'
+    ? shapeDashboard(state.snapshot, {
+      requests: t('requestsLabel'),
+      input: t('inputLabel'),
+      cacheRead: t('cacheReadLabel'),
+      cacheWrite: t('cacheWriteLabel'),
+      output: t('outputLabel'),
+      total: t('totalLabel'),
+    }, range)
+    : undefined
 
   return (
     <div className={css.section}>
@@ -85,13 +85,18 @@ export function UsageSection({ t, load }: UsageSectionProps) {
           <span className={css.code}>{state.detail}</span>
         </p>
       )}
-      {state.phase === 'ready' && <Dashboard t={t} view={state.view} />}
+      {state.phase === 'ready' && view !== undefined && <Dashboard t={t} view={view} range={range} onRange={setRange} />}
     </div>
   )
 }
 
 /** Dashboard body once a snapshot is ready. */
-function Dashboard({ t, view }: { t: (key: UsageLocaleKey) => string; view: UsageDashboardView }) {
+function Dashboard({ t, view, range, onRange }: {
+  t: (key: UsageLocaleKey) => string
+  view: UsageDashboardView
+  range: SeriesRange
+  onRange: (range: SeriesRange) => void
+}) {
   return (
     <>
       <section className={css.card} aria-label={t('totalsHeading')}>
@@ -123,26 +128,25 @@ function Dashboard({ t, view }: { t: (key: UsageLocaleKey) => string; view: Usag
           )}
       </section>
       <section className={css.card}>
-        <h3 className={css.cardHeading}>{t('trendHeading')}</h3>
-        {view.trend.length === 0
+        <div className={css.cardHead}>
+          <h3 className={css.cardHeading}>{t('trendHeading')}</h3>
+          <div className={css.rangeRow}>
+            {SERIES_RANGES.map(option => (
+              <button
+                key={option}
+                type='button'
+                className={css.rangeButton}
+                data-active={range === option ? 'true' : undefined}
+                onClick={() => { onRange(option) }}
+              >
+                {t('trendDays').replace('{count}', String(option))}
+              </button>
+            ))}
+          </div>
+        </div>
+        {view.series.points.every(point => !point.active)
           ? <p className={css.muted}>{t('trendEmpty')}</p>
-          : (
-            <div className={css.trend}>
-              {view.trend.map(bar => (
-                <div key={bar.day} className={css.trendColumn}>
-                  <span className={css.trendValue}>{view.trend.length > 1 || bar.active ? bar.display : ''}</span>
-                  <div className={css.trendTrack}>
-                    <span
-                      className={css.trendBar}
-                      data-active={bar.active ? 'true' : undefined}
-                      style={{ width: String(bar.width) + '%' }}
-                    />
-                  </div>
-                  <span className={css.trendDay}>{bar.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          : <TimeChart series={view.series} label={t('trendHeading')} />}
       </section>
       <section className={css.card}>
         <h3 className={css.cardHeading}>{t('routesHeading')}</h3>
@@ -170,6 +174,91 @@ function Dashboard({ t, view }: { t: (key: UsageLocaleKey) => string; view: Usag
           )}
         {view.hiddenRoutes > 0 && <p className={css.more}>{t('moreRoutes').replace('{count}', String(view.hiddenRoutes))}</p>}
       </section>
+      <section className={css.card} aria-label={t('sessionsHeading')}>
+        <h3 className={css.cardHeading}>{t('sessionsHeading')}</h3>
+        {view.sessions.length === 0
+          ? <p className={css.muted}>{t('sessionsEmpty')}</p>
+          : (
+            <table className={css.table}>
+              <thead>
+                <tr>
+                  <th scope='col'>{t('sessionColumn')}</th>
+                  <th scope='col'>{t('sessionRequestsColumn')}</th>
+                  <th scope='col'>{t('sessionTokensColumn')}</th>
+                  <th scope='col'>{t('sessionActivityColumn')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.sessions.map(row => (
+                  <tr key={row.sessionId} title={row.sessionId}>
+                    <td>{row.label}</td>
+                    <td>{row.requests}</td>
+                    <td>{row.tokens}</td>
+                    <td className={css.sessionActivity}>{row.lastActivity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        {view.hiddenSessions > 0 && <p className={css.more}>{t('moreSessions').replace('{count}', String(view.hiddenSessions))}</p>}
+      </section>
     </>
+  )
+}
+
+/** The chart's viewBox height; points keep a 2-unit inset top and bottom. */
+const CHART_HEIGHT = 40
+
+/** Map a 0-100 relative height onto the stretched viewBox. */
+function toSvgY(y: number): number {
+  return CHART_HEIGHT - 2 - (y / 100) * (CHART_HEIGHT - 4)
+}
+
+/** The SVG time chart: an area over evenly spaced UTC days with per-day hover titles. */
+function TimeChart({ series, label }: { series: UsageSeriesView; label: string }) {
+  const hitWidth = 100 / series.points.length
+  const line = series.points.map(point => String(point.x) + ',' + String(toSvgY(point.y))).join(' ')
+  return (
+    <div className={css.trendChartWrap}>
+      <span className={css.trendPeak}>{series.peak}</span>
+      <svg
+        className={css.trendChart}
+        viewBox={'0 0 100 ' + String(CHART_HEIGHT)}
+        preserveAspectRatio='none'
+        role='img'
+        aria-label={label}
+      >
+        <polygon className={css.trendArea} points={'0,' + String(CHART_HEIGHT) + ' ' + line + ' 100,' + String(CHART_HEIGHT)} />
+        <polyline className={css.trendLine} points={line} />
+        {series.points.map(point => (
+          <rect
+            key={point.day}
+            className={css.trendHit}
+            x={Math.max(0, point.x - hitWidth / 2)}
+            y={0}
+            width={hitWidth}
+            height={CHART_HEIGHT}
+          >
+            <title>{point.title}</title>
+          </rect>
+        ))}
+      </svg>
+      <div className={css.trendAxis}>
+        {series.axis.map((axis, index) => (
+          <span
+            key={axis.x}
+            className={css.trendAxisLabel}
+            style={{
+              left: String(axis.x) + '%',
+              transform: index === 0
+                ? 'translateX(0)'
+                : index === series.axis.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+            }}
+          >
+            {axis.label}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }

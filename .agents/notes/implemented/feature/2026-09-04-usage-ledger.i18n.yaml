@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-04-usage-ledger.md
-2026-09-04-usage-ledger.md: 54d110d849dba2dbc77cbd91e49127b0f136bbda
-2026-09-04-usage-ledger.zh.md: b5365e8ba2b32508efde54df83a6221daaee5188
+2026-09-04-usage-ledger.md: fa2a961577d9e49703aef5c345d1e16f8da87780
+2026-09-04-usage-ledger.zh.md: d1bec31cf468ed1a8a295aac07fbdc2f2ee2efdc

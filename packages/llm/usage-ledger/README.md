@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@deepseek-ai/dsh-usage-ledger` records every billed model call across the whole harness deployment: each usage-reporting `assistant/message` event lands as one JSON line in an append-only ledger file under the Harness home, in real time, and `ctx.usageLedger` folds the file into whole-ledger totals — all-time, per route, and per UTC day — served through the `/usage` command. The ledger is durable cross-session accounting: it survives paging, compaction, session deletion, and process restarts, and it is independent of the per-session `tokenUsage` projection that `dsh-token-meter` serves. It adds no prompt, message, schema, or tool of its own.
+`@deepseek-ai/dsh-usage-ledger` records every billed model call across the whole harness deployment: each usage-reporting `assistant/message` event lands as one JSON line in an append-only ledger file under the Harness home, in real time, and `ctx.usageLedger` folds the file into whole-ledger totals — all-time, per route, per UTC day, and per session — served through the `/usage` command. The ledger is durable cross-session accounting: it survives paging, compaction, session deletion, and process restarts, and it is independent of the per-session `tokenUsage` projection that `dsh-token-meter` serves. It adds no prompt, message, schema, or tool of its own.
 
 ## Table of Contents
 
@@ -48,11 +48,11 @@ The append chain starts the moment the event commits, so the file reflects each 
 
 ### Reading totals
 
-`ctx.usageLedger.totals()` returns a deeply frozen snapshot: grand totals, per-route totals sorted largest first, per-UTC-day totals ascending, and the newest record time. The fold re-reads the ledger file when its size or mtime moved past the cached fold — including appends from another process sharing the harness home — and serves the cached snapshot otherwise.
+`ctx.usageLedger.totals()` returns a deeply frozen snapshot: grand totals, per-route totals sorted largest first, per-UTC-day totals ascending, per-session totals sorted largest first with each session's newest record time, and the newest record time. The fold re-reads the ledger file when its size or mtime moved past the cached fold — including appends from another process sharing the harness home — and serves the cached snapshot otherwise.
 
 ### The /usage command
 
-When a command registry is composed, the plugin registers the global `/usage` command. It renders the all-time figures, today's UTC figures, and the top five routes; an empty ledger renders a pointer to the file instead.
+When a command registry is composed, the plugin registers the global `/usage` command. It renders the all-time figures, today's UTC figures, the top five routes, and the top five sessions with their latest activity day; an empty ledger renders a pointer to the file instead.
 
 -----
 
@@ -127,7 +127,7 @@ These limits define where the ledger stops and future work begins. They are curr
 - **Totals are append-time facts** — the ledger records what the durable log reports per attempt; provider-side billing adjustments and usage on failed attempts that report no accounting are invisible to it.
 - **Day buckets are UTC** — the durable day key is the record time's UTC calendar day, by design; local-time views remain a display concern.
 - **totals() is a fold-time snapshot** — records another process appends during the fold are not reflected until the next call observes a changed file.
-- **No query API yet** — the service exposes whole-ledger totals; per-session or time-window breakdowns require reading the JSONL file directly until a query surface needs them.
+- **No query API yet** — the service exposes whole-ledger totals, including the fixed per-session breakdown; time-window or filtered breakdowns require reading the JSONL file directly until a query surface needs them.
 
 <a id="dev-note"></a>
 ### Dev Note

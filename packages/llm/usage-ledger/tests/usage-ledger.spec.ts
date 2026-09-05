@@ -121,10 +121,26 @@ describe('usage fold', () => {
     expect(totals.totalTokens).toBe(172)
     expect(totals.byDay.map(entry => entry.day)).toEqual(['2024-10-27', '2024-10-28'])
     expect(totals.byModel[0]).toMatchObject({ provider: 'p2', model: 'm2', totalTokens: 150 })
+    expect(totals.bySession.map(entry => entry.sessionId)).toEqual(['s1', 's2'])
+    expect(totals.bySession[0]).toMatchObject({ sessionId: 's1', requests: 2, totalTokens: 170, lastActivity: 1730086400000 })
+    expect(totals.bySession[1]).toMatchObject({ sessionId: 's2', requests: 1, totalTokens: 2, lastActivity: 1730000000001 })
     expect(totals.lastRecordTime).toBe(1730086400000)
     expect(Object.isFrozen(totals)).toBe(true)
     expect(Object.isFrozen(totals.byModel)).toBe(true)
     expect(Object.isFrozen(totals.byModel[0])).toBe(true)
+    expect(Object.isFrozen(totals.bySession)).toBe(true)
+    expect(Object.isFrozen(totals.bySession[0])).toBe(true)
+  })
+
+  it('breaks total-tokens session ties by session id and tracks last activity', () => {
+    const records: UsageLedgerRecord[] = [
+      { version: 1, time: 2, sessionId: 'session-b', provider: 'p', model: 'm', inputTokens: 1, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      { version: 1, time: 7, sessionId: 'session-a', provider: 'p', model: 'm', inputTokens: 1, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      { version: 1, time: 3, sessionId: 'session-a', provider: 'p', model: 'm', inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    ]
+    const totals = foldRecords(records)
+    expect(totals.bySession.map(entry => entry.sessionId)).toEqual(['session-a', 'session-b'])
+    expect(totals.bySession[0]).toMatchObject({ requests: 2, lastActivity: 7 })
   })
 
   it('breaks total-tokens ties by route name', () => {
@@ -244,6 +260,7 @@ describe('usage ledger service', () => {
     expect(totals.requests).toBe(0)
     expect(totals.byModel).toEqual([])
     expect(totals.byDay).toEqual([])
+    expect(totals.bySession).toEqual([])
     expect(totals.lastRecordTime).toBeNull()
     appendUsage(session, USAGE_A)
     await ledger.flush()
@@ -377,7 +394,11 @@ describe('usage command text', () => {
     expect(text).toContain('Today (UTC ')
     expect(text).toContain('deepseek-official/deepseek-v4-flash')
     expect(text).toContain('pi/gateway-model')
+    expect(text).toContain('By session:')
+    expect(text).toContain('s1 — 1 requests · 2.7M tokens · last ' + new Date().toISOString().slice(0, 10))
+    expect(text).toContain('s2 — 1 requests · 952 tokens')
     expect(text).not.toContain('more route')
+    expect(text).not.toContain('more session')
   })
 
   it('summarizes routes beyond the display cap', () => {
@@ -397,7 +418,35 @@ describe('usage command text', () => {
       records.push({ version: 1, time: Date.now(), sessionId: 's'.concat(suffix), provider: 'p', model: 'm'.concat(suffix), inputTokens: 10, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 })
     }
     const text = formatUsageTotals(foldRecords(records), 'ledger')
-    expect(text.endsWith('… and 1 more route')).toBe(true)
+    // The session section now trails the route summary.
+    expect(text).toContain('… and 1 more route')
+  })
+
+  it('summarizes sessions beyond the display cap and strips the session prefix', () => {
+    const records: UsageLedgerRecord[] = []
+    for (let index = 0; index < 7; index++) {
+      records.push({ version: 1, time: Date.now(), sessionId: 'session-id-'.concat(String(index)), provider: 'p', model: 'm', inputTokens: 10, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 })
+    }
+    const text = formatUsageTotals(foldRecords(records), 'ledger')
+    expect(text).toContain('id-0 — 1 requests · 10 tokens')
+    expect(text.endsWith('… and 2 more sessions')).toBe(true)
+  })
+
+  it('uses the singular for one hidden session', () => {
+    const records: UsageLedgerRecord[] = []
+    for (let index = 0; index < 6; index++) {
+      records.push({ version: 1, time: Date.now(), sessionId: 'session-id-'.concat(String(index)), provider: 'p', model: 'm', inputTokens: 10, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 })
+    }
+    const text = formatUsageTotals(foldRecords(records), 'ledger')
+    expect(text.endsWith('… and 1 more session')).toBe(true)
+  })
+
+  it('keeps a session id verbatim when the session- prefix is absent', () => {
+    const records: UsageLedgerRecord[] = [
+      { version: 1, time: Date.now(), sessionId: 'plain-id', provider: 'p', model: 'm', inputTokens: 10, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    ]
+    const text = formatUsageTotals(foldRecords(records), 'ledger')
+    expect(text).toContain('plain-id — 1 requests · 10 tokens')
   })
 
   it('formats exact counts below one thousand', () => {

@@ -36,6 +36,7 @@ export type {
   UsageLedgerBucket,
   UsageLedgerDayTotals,
   UsageLedgerModelTotals,
+  UsageLedgerSessionTotals,
   UsageLedgerSnapshot,
   UsageLedgerTotals,
 } from '@deepseek-ai/dsh-usage-ledger/types'

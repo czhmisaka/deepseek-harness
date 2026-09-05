@@ -25,6 +25,9 @@ function snapshotOf(totalsOverrides: Partial<UsageLedgerTotals>): UsageLedgerSna
       { provider: 'pi', model: 'gateway', requests: 8, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 60_000 },
     ],
     byDay: [{ day: '2026-09-03', requests: 12, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 210_000 }],
+    bySession: [
+      { sessionId: 'session-63e82d3e-e4e9-49d7-8444-22bd34df0460', requests: 120, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 200_000, lastActivity: Date.UTC(2026, 8, 3) },
+    ],
     lastRecordTime: 1000,
     ...totalsOverrides,
   }
@@ -54,7 +57,8 @@ const copy: Record<string, string> = {
   totalLabel: 'Total',
   todayHeading: 'Today (UTC)',
   todayNone: 'No usage today yet.',
-  trendHeading: 'Last 7 days (UTC)',
+  trendHeading: 'Usage over time (UTC)',
+  trendDays: '{count} days',
   trendEmpty: 'Not enough history for a trend yet.',
   routesHeading: 'By model',
   routesEmpty: 'No routes recorded.',
@@ -63,6 +67,13 @@ const copy: Record<string, string> = {
   routeTokensColumn: 'Total tokens',
   ledgerPathLabel: 'Ledger file',
   moreRoutes: '{count} more routes',
+  sessionsHeading: 'By session',
+  sessionsEmpty: 'No sessions recorded.',
+  sessionColumn: 'Session',
+  sessionRequestsColumn: 'Requests',
+  sessionTokensColumn: 'Total tokens',
+  sessionActivityColumn: 'Last activity',
+  moreSessions: '{count} more sessions',
 }
 
 /** The stub translate the spec renders with. */
@@ -80,6 +91,10 @@ describe('usage section', () => {
     expect(screen.getByText('1.2M')).toBeDefined()
     expect(screen.getByText('deepseek-official/deepseek-v4-flash')).toBeDefined()
     expect(screen.getByText((_, element) => element?.textContent === 'Ledger file: ~/.dsh/usage/usage.jsonl')).toBeDefined()
+    expect(screen.getByText('63e82d3e…')).toBeDefined()
+    expect(screen.getByText('2026-09-03')).toBeDefined()
+    expect(screen.getByText('7 days')).toBeDefined()
+    expect(screen.getByText('30 days')).toBeDefined()
   })
 
   it('shows the failure copy with the wire code when the call fails', async () => {
@@ -113,13 +128,45 @@ describe('usage section', () => {
     expect(screen.getByText('deepseek-official/deepseek-v4-flash')).toBeDefined()
   })
 
-  it('shows an empty ledger without trend or routes', async () => {
+  it('shows an empty ledger without trend, routes, or sessions', async () => {
     const emptyTotals = {
-      requests: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0, byModel: [], byDay: [],
+      requests: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+      totalTokens: 0, byModel: [], byDay: [], bySession: [],
     }
     const screen = render(<UsageSection {...propsFor(async () => ({ ok: true as const, snapshot: snapshotOf(emptyTotals) }))} />)
     await act(async () => { await Promise.resolve() })
     expect(screen.getByText('Not enough history for a trend yet.')).toBeDefined()
     expect(screen.getByText('No routes recorded.')).toBeDefined()
+    expect(screen.getByText('No sessions recorded.')).toBeDefined()
+  })
+
+  it('summarizes sessions beyond the display cap', async () => {
+    const bySession = Array.from({ length: 11 }, (_, index) => ({
+      sessionId: 'session-' + String(index).padStart(8, '0'),
+      requests: 1, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 10, lastActivity: 0,
+    }))
+    const screen = render(<UsageSection {...propsFor(async () => ({ ok: true as const, snapshot: snapshotOf({ bySession }) }))} />)
+    await act(async () => { await Promise.resolve() })
+    expect(screen.getByText('1 more sessions')).toBeDefined()
+    expect(screen.getByText('00000009')).toBeDefined()
+  })
+
+  it('renders the time chart for a today entry and switches ranges without refetching', async () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const byDay = [{
+      day: today, requests: 3, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 5_000,
+    }]
+    let loads = 0
+    const screen = render(<UsageSection {...propsFor(async () => {
+      loads += 1
+      return { ok: true as const, snapshot: snapshotOf({ byDay }) }
+    })} />)
+    await act(async () => { await Promise.resolve() })
+    expect(screen.getByRole('img', { name: 'Usage over time (UTC)' })).toBeDefined()
+    expect(screen.getByText(today.slice(5))).toBeDefined()
+    await act(async () => { screen.getByText('30 days').click() })
+    expect(screen.getByRole('img', { name: 'Usage over time (UTC)' })).toBeDefined()
+    expect(screen.getByText('30 days').getAttribute('data-active')).toBe('true')
+    expect(loads).toBe(1)
   })
 })

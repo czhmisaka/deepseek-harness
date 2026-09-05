@@ -1,4 +1,4 @@
-/* Usage section: totals grid, day trend, and route table over semantic tokens. */
+/* Usage section: totals grid, time chart, and route/session tables over semantic tokens. */
 
 .section {
   display: flex;
@@ -100,52 +100,87 @@
   font-size: 14px;
 }
 
-.trend {
+.cardHead {
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.trendTrack {
-  display: block;
-  width: 44px;
-  height: 72px;
-  border-radius: 4px;
+.rangeRow {
+  display: flex;
+  gap: 4px;
+}
+
+.rangeButton {
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.rangeButton:hover {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.rangeButton[data-active='true'] {
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-border-l3);
   background: var(--dsw-alias-fill-l1);
-  position: relative;
-  overflow: hidden;
 }
 
-.trendBar {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  border-radius: 4px 4px 0 0;
-  background: var(--dsw-alias-fill-accent);
-  display: block;
-}
-
-.trendBar[data-active='true'] {
-  background: var(--dsw-alias-label-accent);
-}
-
-.trendColumn {
+.trendChartWrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
+}
+
+.trendPeak {
+  align-self: flex-end;
   font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.trendChart {
+  display: block;
+  width: 100%;
+  height: 96px;
+}
+
+.trendArea {
+  fill: var(--dsw-alias-fill-accent);
+  fill-opacity: 0.35;
+}
+
+.trendLine {
+  fill: none;
+  stroke: var(--dsw-alias-label-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.trendHit {
+  fill: transparent;
+}
+
+.trendAxis {
+  position: relative;
+  height: 14px;
+  font-size: 10px;
   color: var(--dsw-alias-label-tertiary);
 }
 
-.trendValue {
-  font-variant-numeric: tabular-numeric;
-}
-
-.trendTrack {
-  display: flex;
-  align-items: flex-end;
+.trendAxisLabel {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .table {
@@ -170,6 +205,12 @@
   margin: 0;
   font-size: 12px;
   color: var(--dsw-alias-label-tertiary);
+}
+
+.sessionActivity {
+  color: var(--dsw-alias-label-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .code {

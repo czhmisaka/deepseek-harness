@@ -32,7 +32,15 @@ export type UsageLocaleKey =
   | 'routeTokensColumn'
   | 'ledgerPathLabel'
   | 'moreRoutes'
+  | 'sessionsHeading'
+  | 'sessionsEmpty'
+  | 'sessionColumn'
+  | 'sessionRequestsColumn'
+  | 'sessionTokensColumn'
+  | 'sessionActivityColumn'
+  | 'moreSessions'
 
+/** The English dictionary; every key of the union resolves. */
 export const en: Record<UsageLocaleKey, string> = {
   nav: 'Usage',
   bubbleAria: 'Token usage bubble',
@@ -55,7 +63,7 @@ export const en: Record<UsageLocaleKey, string> = {
   totalLabel: 'Total',
   todayHeading: 'Today (UTC)',
   todayNone: 'No usage today yet.',
-  trendHeading: 'Last 7 days (UTC)',
+  trendHeading: 'Usage over time (UTC)',
   trendDays: '{count} days',
   trendEmpty: 'Not enough history for a trend yet.',
   routesHeading: 'By model',
@@ -65,8 +73,16 @@ export const en: Record<UsageLocaleKey, string> = {
   routeTokensColumn: 'Total tokens',
   ledgerPathLabel: 'Ledger file',
   moreRoutes: '{count} more routes',
+  sessionsHeading: 'By session',
+  sessionsEmpty: 'No sessions recorded.',
+  sessionColumn: 'Session',
+  sessionRequestsColumn: 'Requests',
+  sessionTokensColumn: 'Total tokens',
+  sessionActivityColumn: 'Last activity',
+  moreSessions: '{count} more sessions',
 }
 
+/** The Chinese dictionary, kept in lockstep with the English one. */
 export const zh: Record<UsageLocaleKey, string> = {
   nav: '用量统计',
   bubbleAria: 'Token 用量气泡',
@@ -89,9 +105,9 @@ export const zh: Record<UsageLocaleKey, string> = {
   totalLabel: '总量',
   todayHeading: '今日（UTC）',
   todayNone: '今天还没有用量。',
-  trendHeading: '近 7 天（UTC）',
+  trendHeading: '用量走势（UTC）',
   trendDays: '{count} 天',
-  trendEmpty: '历史还不足以为你画出趋势。',
+  trendEmpty: '历史还不足以为你画出走势。',
   routesHeading: '按模型',
   routesEmpty: '暂无路由记录。',
   routeNameColumn: '路由',
@@ -99,4 +115,11 @@ export const zh: Record<UsageLocaleKey, string> = {
   routeTokensColumn: '总 tokens',
   ledgerPathLabel: '账本文件',
   moreRoutes: '还有 {count} 条路由',
+  sessionsHeading: '按会话',
+  sessionsEmpty: '暂无会话记录。',
+  sessionColumn: '会话',
+  sessionRequestsColumn: '请求数',
+  sessionTokensColumn: '总 tokens',
+  sessionActivityColumn: '最近活动',
+  moreSessions: '还有 {count} 个会话',
 }

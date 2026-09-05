@@ -11,6 +11,9 @@ import type { UsageLedgerTotals } from './types.ts'
 /** Routes listed under "By model" before the summary remainder line. */
 const DISPLAYED_MODEL_ROUTES = 5
 
+/** Sessions listed under "By session" before the summary remainder line. */
+const DISPLAYED_SESSIONS = 5
+
 /**
  * Compact humanized token count: exact below 1000, one-decimal K below one
  * million, one-decimal M above, trailing zeros trimmed.
@@ -28,6 +31,22 @@ export function formatTokenCount(count: number): string {
 function scaledTokenCount(count: number, divisor: number): string {
   const scaled = (count / divisor).toFixed(1)
   return scaled.endsWith('.0') ? scaled.slice(0, -2) : scaled
+}
+
+/**
+ * User-facing session label: the recorded id without its conventional
+ * "session-" prefix, verbatim when the prefix is absent.
+ *
+ * @param sessionId - the ledger record's session id.
+ * @returns the shortened display form.
+ */
+function displaySessionId(sessionId: string): string {
+  return sessionId.startsWith('session-') ? sessionId.slice('session-'.length) : sessionId
+}
+
+/** The UTC calendar day (YYYY-MM-DD) of one epoch-ms time. */
+function activityDay(time: number): string {
+  return new Date(time).toISOString().slice(0, 10)
 }
 
 /**
@@ -62,6 +81,16 @@ export function formatUsageTotals(totals: UsageLedgerTotals, ledgerDisplay: stri
   if (totals.byModel.length > DISPLAYED_MODEL_ROUTES) {
     const rest = totals.byModel.length - DISPLAYED_MODEL_ROUTES
     lines.push('  … and ' + String(rest) + ' more route' + (rest === 1 ? '' : 's'))
+  }
+  if (totals.bySession.length > 0) {
+    lines.push('By session:')
+    for (const session of totals.bySession.slice(0, DISPLAYED_SESSIONS)) {
+      lines.push('  ' + displaySessionId(session.sessionId) + ' — ' + session.requests.toLocaleString('en-US') + ' requests · ' + formatTokenCount(session.totalTokens) + ' tokens · last ' + activityDay(session.lastActivity))
+    }
+    if (totals.bySession.length > DISPLAYED_SESSIONS) {
+      const rest = totals.bySession.length - DISPLAYED_SESSIONS
+      lines.push('  … and ' + String(rest) + ' more session' + (rest === 1 ? '' : 's'))
+    }
   }
   return lines.join('\n')
 }
