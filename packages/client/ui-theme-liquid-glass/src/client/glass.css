@@ -38,8 +38,8 @@ body[data-ds-glass] > [class*='_frame_'] {
 
 /* Sidebar column: the thinnest pane, blurred over the wallpaper. */
 body[data-ds-glass] [class*='_sidebarCol_'] {
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(var(--dsg-blur-main, 22px)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--dsg-blur-main, 22px)) saturate(150%);
   background: var(--dsw-specific-sidebar-fill);
 }
 
@@ -52,8 +52,8 @@ body[data-ds-glass] [class*='_detailsCol_'] {
 
 /* Shell overlay occupants (dialogs, popovers, the usage bubble and panel). */
 body[data-ds-glass] [data-shell-overlay] > * {
-  backdrop-filter: blur(26px) saturate(170%);
-  -webkit-backdrop-filter: blur(26px) saturate(170%);
+  backdrop-filter: blur(var(--dsg-blur-main, 26px)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--dsg-blur-main, 26px)) saturate(170%);
 }
 
 /* Specular edge: a light-catching inner hairline on glass panes. */
@@ -69,12 +69,12 @@ body[data-ds-glass] [data-shell-overlay] > * {
 /* Cards and raised panes across features turn into frosted panes. */
 body[data-ds-glass] [class*='_card_'],
 body[data-ds-glass] [class*='_panel_']:not([data-shell-overlay]) {
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(calc(var(--dsg-blur-main, 26px) * 0.7)) saturate(140%);
+  -webkit-backdrop-filter: blur(calc(var(--dsg-blur-main, 26px) * 0.7)) saturate(140%);
 }
 
 /* The settings dialog itself becomes the hero glass sheet. */
 body[data-ds-glass] dialog {
-  backdrop-filter: blur(30px) saturate(160%);
-  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  backdrop-filter: blur(calc(var(--dsg-blur-main, 26px) + 4px)) saturate(160%);
+  -webkit-backdrop-filter: blur(calc(var(--dsg-blur-main, 26px) + 4px)) saturate(160%);
 }
