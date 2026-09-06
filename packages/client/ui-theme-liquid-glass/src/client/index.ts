@@ -21,7 +21,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import glassCss from './glass.css?inline'
-import { mountMatrixRain, unmountMatrixRain } from './matrix-rain-wallpaper.ts'
+import { mountSeaWallpaper, unmountSeaWallpaper } from './sea-wallpaper.ts'
 import { GLASS_TOKENS } from './tokens.ts'
 import { en, zh, type LiquidGlassLocaleKey } from './locales.ts'
 import { GlassRow } from './GlassRow.tsx'
@@ -88,10 +88,10 @@ export function apply(ctx: ClientContext): void {
   const applyScope = (activeId: string): void => {
     if (activeId === LIQUID_GLASS_THEME_ID) {
       document.body.setAttribute(GLASS_ATTRIBUTE, '')
-      mountMatrixRain('silicon-valley')
+      mountSeaWallpaper()
     } else {
       document.body.removeAttribute(GLASS_ATTRIBUTE)
-      unmountMatrixRain()
+      unmountSeaWallpaper()
     }
   }
   applyScope(theme.getTheme().active.id)
@@ -103,7 +103,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => () => {
     disposeTheme()
     document.body.removeAttribute(GLASS_ATTRIBUTE)
-    unmountMatrixRain()
+    unmountSeaWallpaper()
   }, 'ui-theme-liquid-glass: theme registration')
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
