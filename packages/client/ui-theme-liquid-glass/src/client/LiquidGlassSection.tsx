@@ -1,43 +1,31 @@
 /** Liquid Glass settings section: enable toggle plus live parameter controls. */
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { LiquidGlassSettings } from '../liquid-glass-settings.ts'
+import type { InjectFace, PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+import type { createLiquidGlassStore } from './settings-store.ts'
 import css from './LiquidGlassSection.module.css'
 
-/** Injected business face: the scope read/write the apply chain shares. */
+/** Injected business face: currently empty (writes ride the store actions). */
 export interface LiquidGlassSectionInjected {
-  /** The bound settings scope (value + revision flow through the caller's store). */
-  scope: {
-    getSnapshot: () => { status: string; value: LiquidGlassSettings | undefined }
-  }
-  /** Write one parameter; the scope subscription re-applies it. */
+  /** Write one parameter durably (the apply chain re-applies it). */
   set: (field: string, value: unknown) => void
 }
 
-/** Full component props: runtime share + locale seat + injected face. */
+/** Full component props: runtime share + store share + locale seat + injected face. */
 export type LiquidGlassSectionProps =
   PropsRuntime<'settings.section'>
+  & PropsStore<ReturnType<typeof createLiquidGlassStore>>
   & PropsLocale<'liquid-glass'>
   & InjectFace<LiquidGlassSectionInjected>
 
-/** The parameter rows' shared metadata (id → slider bounds). */
-const SLIDERS: readonly { id: 'speed' | 'opacity' | 'blur'; min: number; max: number; step: number }[] = [
-  { id: 'speed', min: 0.2, max: 3, step: 0.1 },
-  { id: 'opacity', min: 0.3, max: 1, step: 0.05 },
-  { id: 'blur', min: 0, max: 40, step: 1 },
-]
-
 /** Render the Liquid Glass page. */
-export function LiquidGlassSection({ t, scope, set }: LiquidGlassSectionProps) {
-  const snapshot = scope.getSnapshot()
-  const value = snapshot.value
-  const ready = snapshot.status === 'ready' && value !== undefined
+export function LiquidGlassSection({ t, useStore, set }: LiquidGlassSectionProps) {
+  const { status, value } = useStore(s => s)
 
   return (
     <div className={css.section}>
       <h2 className={css.heading}>{t('page.title')}</h2>
       <p className={css.intro}>{t('page.intro')}</p>
-      {!ready && <p className={css.muted}>{t('enable.off')}</p>}
-      {ready && value !== undefined && (
+      {(status !== 'ready' || value === undefined) && <p className={css.muted}>{t('enable.off')}</p>}
+      {status === 'ready' && value !== undefined && (
         <>
           <section className={css.card} aria-label={t('enable.title')}>
             <div className={css.rowHead}>
@@ -76,9 +64,9 @@ export function LiquidGlassSection({ t, scope, set }: LiquidGlassSectionProps) {
             <input
               className={css.slider}
               type='range'
-              min={SLIDERS[0]?.min}
-              max={SLIDERS[0]?.max}
-              step={SLIDERS[0]?.step}
+              min={0.2}
+              max={3}
+              step={0.1}
               value={value.speed}
               onChange={(event) => { set('speed', Number(event.target.value)) }}
             />
@@ -101,9 +89,9 @@ export function LiquidGlassSection({ t, scope, set }: LiquidGlassSectionProps) {
             <input
               className={css.slider}
               type='range'
-              min={SLIDERS[1]?.min}
-              max={SLIDERS[1]?.max}
-              step={SLIDERS[1]?.step}
+              min={0.3}
+              max={1}
+              step={0.05}
               value={value.opacity}
               onChange={(event) => { set('opacity', Number(event.target.value)) }}
             />
@@ -113,9 +101,9 @@ export function LiquidGlassSection({ t, scope, set }: LiquidGlassSectionProps) {
             <input
               className={css.slider}
               type='range'
-              min={SLIDERS[2]?.min}
-              max={SLIDERS[2]?.max}
-              step={SLIDERS[2]?.step}
+              min={0}
+              max={40}
+              step={1}
               value={value.blur}
               onChange={(event) => { set('blur', Number(event.target.value)) }}
             />

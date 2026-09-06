@@ -15,6 +15,9 @@
       "path": "../../../vendor/cordis"
     },
     {
+      "path": "../store"
+    },
+    {
       "path": "../ui-theme"
     },
     {
@@ -22,6 +25,6 @@
     },
     {
       "path": "../ui-renderer"
-    },
+    }
   ]
 }
