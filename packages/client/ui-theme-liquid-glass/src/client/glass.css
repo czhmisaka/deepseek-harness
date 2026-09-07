@@ -27,7 +27,7 @@ body[data-ds-glass] {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgb(4 7 14 / 32%);
+  background: rgb(4 7 14 / 10%);
 }
 
 /* The app frame rides above the wallpaper. */
@@ -46,8 +46,8 @@ body[data-ds-glass] [class*='_sidebarCol_'] {
 /* Center and details columns get a whisper of blur so cards float. */
 body[data-ds-glass] [class*='_centerCol_'],
 body[data-ds-glass] [class*='_detailsCol_'] {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 /* Shell overlay occupants (dialogs, popovers, the usage bubble and panel). */

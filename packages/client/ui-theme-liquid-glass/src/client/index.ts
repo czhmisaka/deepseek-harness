@@ -24,7 +24,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import glassCss from './glass.css?inline'
 import { GLASS_TOKENS } from './tokens.ts'
-import { mountSeaWallpaper, unmountSeaWallpaper } from './sea-wallpaper.ts'
+import { mountSeaWallpaper, unmountSeaWallpaper, updateSeaWallpaper } from './sea-wallpaper.ts'
 import { LiquidGlassSection } from './LiquidGlassSection.tsx'
 import { createLiquidGlassStore } from './settings-store.ts'
 import { en, zh } from './locales.ts'
@@ -82,7 +82,29 @@ function applyParams(theme: ThemeRuntime, params: LiquidGlassSettings): void {
   if (params.enabled) {
     body.setAttribute(GLASS_ATTRIBUTE, '')
     body.style.setProperty('--dsg-blur-main', String(Math.round(params.blur)) + 'px')
-    mountSeaWallpaper({ seaTheme: params.seaTheme, speed: params.speed })
+    const custom = params.colorMode === 'custom'
+    const fx = {
+      digitSize: params.digitSize,
+      digitBrightness: params.digitBrightness,
+      digitFlicker: params.digitFlicker,
+      foam: params.foam,
+      foamAmount: params.foamAmount,
+    }
+    // Mount is idempotent; update applies every parameter live (palette with
+    // its built-in fade, flow speed, and custom band colors), so control
+    // changes land without a disable/enable cycle.
+    mountSeaWallpaper({
+      seaTheme: params.seaTheme,
+      speed: params.speed,
+      ...fx,
+      ...(custom ? { colorA: params.colorA, colorB: params.colorB } : {}),
+    })
+    updateSeaWallpaper({
+      seaTheme: params.seaTheme,
+      speed: params.speed,
+      ...fx,
+      ...(custom ? { colorA: params.colorA, colorB: params.colorB } : {}),
+    })
     if ((theme.getTheme().preference as string) !== LIQUID_GLASS_THEME_ID) theme.setTheme(LIQUID_GLASS_THEME_ID)
   } else {
     body.removeAttribute(GLASS_ATTRIBUTE)
@@ -90,6 +112,14 @@ function applyParams(theme: ThemeRuntime, params: LiquidGlassSettings): void {
     if ((theme.getTheme().preference as string) === LIQUID_GLASS_THEME_ID) theme.setTheme('dark')
   }
 }
+
+/**
+ * Required services (dsh client-plugin contract): this plugin reads `ctx.theme`
+ * (register+switch the glass definition), `ctx.locale` (UI copy), `ctx.settingsScope`
+ * (durable sliders) and `ctx.slots` (settings.section). Missing any here makes
+ * dsh boot fail with `cannot get property "X" without inject`.
+ */
+export const inject = ['slots', 'theme', 'locale', 'settingsScope']
 
 /** Client plugin body: theme registration, parameter application, settings page. */
 export function apply(ctx: ClientContext): void {
@@ -116,6 +146,10 @@ export function apply(ctx: ClientContext): void {
   sync()
   ctx.effect(() => scope.subscribe(() => { sync() }), 'ui-theme-liquid-glass: parameter application')
 
+  // The sea wallpaper (layer + WebGL canvas + rAF loop) is imperative DOM:
+  // bind its teardown to the plugin fiber so a stop/update never leaks it.
+  ctx.effect(() => () => { unmountSeaWallpaper() }, 'ui-theme-liquid-glass: sea wallpaper teardown')
+
   ctx.effect(() => ctx.locale.register('liquid-glass', { zh, en }), 'ui-theme-liquid-glass: dictionaries')
 
   ctx.slots.inject('settings.section', () => ctx.slots.register({
@@ -131,6 +165,11 @@ export function apply(ctx: ClientContext): void {
       sync()
       return {
         set: (field: string, value: unknown) => { void scope.set(field, value) },
+        // One atomic write for correlated field groups (the random color
+        // pair); three queued single-field sets race per-field recoveries.
+        setMany: (values: Record<string, unknown>) => {
+          void scope.mutate(Object.entries(values).map(([field, value]) => ({ op: 'set' as const, path: [field], value: value as import('@deepseek-ai/dsh-util-values').JsonValue })))
+        },
       }
     },
   }, LiquidGlassSection))

@@ -11,6 +11,19 @@ export type LiquidGlassLocaleKey =
   | 'seaTheme.title'
   | 'seaTheme.dark'
   | 'seaTheme.light'
+  | 'colorMode.title'
+  | 'colorMode.theme'
+  | 'colorMode.custom'
+  | 'colorMode.hint'
+  | 'colorA.title'
+  | 'colorB.title'
+  | 'color.random'
+  | 'digit.title'
+  | 'digit.size'
+  | 'digit.brightness'
+  | 'digit.flicker'
+  | 'digit.foam'
+  | 'digit.foamAmount'
   | 'speed.title'
   | 'colorWave.title'
   | 'opacity.title'
@@ -28,6 +41,19 @@ export const en: Record<LiquidGlassLocaleKey, string> = {
   'seaTheme.title': 'Sea palette',
   'seaTheme.dark': 'Dark violet',
   'seaTheme.light': 'Warm orange',
+  'colorMode.title': 'Band colors',
+  'colorMode.theme': 'Theme palette',
+  'colorMode.custom': 'Custom',
+  'colorMode.hint': 'Custom feeds your two colors to the flowing bands; Random rolls a fresh harmonious pair.',
+  'colorA.title': 'Deep band',
+  'colorB.title': 'Bright band',
+  'color.random': 'Random colors',
+  'digit.title': 'Digital sea',
+  'digit.size': 'Digit size',
+  'digit.brightness': 'Digit brightness',
+  'digit.flicker': 'Flicker speed',
+  'digit.foam': 'Character foam',
+  'digit.foamAmount': 'Foam amount',
   'speed.title': 'Band flow speed',
   'colorWave.title': 'Color wave',
   'opacity.title': 'Wallpaper opacity',
@@ -46,6 +72,19 @@ export const zh: Record<LiquidGlassLocaleKey, string> = {
   'seaTheme.title': '海面配色',
   'seaTheme.dark': '暗紫',
   'seaTheme.light': '暖橙',
+  'colorMode.title': '色带配色',
+  'colorMode.theme': '主题配色',
+  'colorMode.custom': '自定义',
+  'colorMode.hint': '自定义时海面色带使用你选的两个颜色；随机按钮会掷出一组和谐的新配色。',
+  'colorA.title': '深色带',
+  'colorB.title': '亮色带',
+  'color.random': '随机配色',
+  'digit.title': '数字海',
+  'digit.size': '字符大小',
+  'digit.brightness': '字符亮度',
+  'digit.flicker': '闪烁速度',
+  'digit.foam': '字符泡沫',
+  'digit.foamAmount': '泡沫浓度',
   'speed.title': '色带流速',
   'colorWave.title': '色彩波动',
   'opacity.title': '壁纸不透明度',

@@ -7,12 +7,12 @@
 /** Alias-token overrides keyed by variable name. */
 export const GLASS_TOKENS: Record<string, string> = {
   // Base: a deep blue-slate that lets the gradient wallpaper glow through.
-  '--dsw-alias-bg-base': 'rgba(10, 14, 24, 0.42)',
+  '--dsw-alias-bg-base': 'rgba(10, 14, 24, 0.30)',
   // Raised surfaces become thin translucent glass panes.
-  '--dsw-alias-bg-layer-1': 'rgba(255, 255, 255, 0.065)',
-  '--dsw-alias-bg-layer-2': 'rgba(255, 255, 255, 0.045)',
+  '--dsw-alias-bg-layer-1': 'rgba(255, 255, 255, 0.045)',
+  '--dsw-alias-bg-layer-2': 'rgba(255, 255, 255, 0.03)',
   // Overlays (dialogs, menus) get a touch more body for legibility.
-  '--dsw-alias-bg-overlay': 'rgba(18, 22, 34, 0.55)',
+  '--dsw-alias-bg-overlay': 'rgba(18, 22, 34, 0.38)',
   // Borders become light-catching hairlines.
   '--dsw-alias-border-l1': 'rgba(255, 255, 255, 0.14)',
   '--dsw-alias-border-l2': 'rgba(255, 255, 255, 0.22)',
@@ -24,5 +24,5 @@ export const GLASS_TOKENS: Record<string, string> = {
   '--dsw-alias-state-success-primary': '#5ce2a8',
   '--dsw-alias-state-warn-primary': '#ffc06b',
   // The sidebar becomes the thinnest pane so the wallpaper shows through most.
-  '--dsw-specific-sidebar-fill': 'rgba(255, 255, 255, 0.035)',
+  '--dsw-specific-sidebar-fill': 'rgba(255, 255, 255, 0.025)',
 }
