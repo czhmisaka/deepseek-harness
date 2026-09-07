@@ -27,8 +27,8 @@ void main() {
   vec2 local = css - paneCenter;
   vec2 halfSize = uPane.zw * 0.5;
   float cornerR = min(uRadius, min(halfSize.x, halfSize.y) * 0.5);
-  vec2 q = abs(local) - (halfSize - vec2(cr));
-  float sd = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - cr;
+  vec2 q = abs(local) - (halfSize - vec2(cornerR));
+  float sd = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - cornerR;
   float inside = 1.0 - smoothstep(-1.0, 1.0, sd);
   if (inside < 0.004) discard;
   float edgeDist = 0.0 - sd;
