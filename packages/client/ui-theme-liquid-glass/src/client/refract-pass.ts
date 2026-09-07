@@ -1,7 +1,7 @@
 /**
  * Liquid Glass refraction pass.
  *
- * One transparent WebGL2 canvas layered above the sea canvas. Glass panes are
+ * One transparent WebGL canvas layered above the sea canvas. Glass panes are
  * rounded-rect SDFs passed as uniforms; inside a pane the shader samples the
  * sea canvas (copied into a texture each frame) with thickness-driven
  * displacement, chromatic dispersion at the curved edges, and a specular rim.
@@ -11,7 +11,7 @@
  * pane rects as uniforms owns the effect.
  */
 
-const FRAG = `#version 300 es
+const FRAG_SRC = `#version 300 es
 precision highp float;
 uniform sampler2D uSea;
 uniform vec2 uRes;
@@ -20,28 +20,35 @@ uniform vec4 uPane;
 uniform float uRadius;
 uniform float uRefract;
 uniform float uDisp;
+uniform float uTime;
 out vec4 fragColor;
 void main() {
   vec2 css = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
-  vec2 paneCenter = uPane.xy + uPane.zw * 0.5;
-  vec2 local = css - paneCenter;
-  vec2 halfSize = uPane.zw * 0.5;
-  float cornerR = min(uRadius, min(halfSize.x, halfSize.y) * 0.5);
-  vec2 q = abs(local) - (halfSize - vec2(cornerR));
-  float sd = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - cornerR;
+  vec2 half_ = uPane.zw * 0.5;
+  vec2 local = css - (uPane.xy + half_);
+  float cr = min(uRadius, min(half_.x, half_.y) * 0.5);
+  vec2 q = abs(local) - (half_ - vec2(cr));
+  float sd = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - cr;
   float inside = 1.0 - smoothstep(-1.0, 1.0, sd);
   if (inside < 0.004) discard;
-  float edgeDist = 0.0 - sd;
+  float edgeDist = -sd;
   float curve = 1.0 - smoothstep(0.0, 56.0, edgeDist);
   float thickness = pow(clamp(edgeDist / 56.0, 0.0, 1.0), 1.4);
   vec2 q2 = max(q, vec2(0.0));
-  vec2 dir = length(q2) > 0.001 ? normalize(q2) * sign(max(q2.x, q2.y)) : vec2(0.0);
+  vec2 dir = (length(q2) > 0.001) ? normalize(q2) * sign(max(q2.x, q2.y)) : vec2(0.0);
   vec2 uvR = clamp((css + dir * thickness * (uRefract - uDisp)) / uViewport, vec2(0.001), vec2(0.999));
   vec2 uvG = clamp((css + dir * thickness * uRefract) / uViewport, vec2(0.001), vec2(0.999));
   vec2 uvB = clamp((css + dir * thickness * (uRefract + uDisp)) / uViewport, vec2(0.001), vec2(0.999));
   vec3 refr = vec3(texture(uSea, uvR).r, texture(uSea, uvG).g, texture(uSea, uvB).b);
-  float rim = smoothstep(0.7, 1.0, curve);
-  vec3 outc = refr * mix(0.94, 1.0, thickness) + vec3(0.92, 0.97, 1.0) * rim * 0.12;
+  // crisp specular rim at the pane edge + faint outer glow
+  float rim = smoothstep(0.90, 1.0, curve) - smoothstep(0.98, 1.0, curve);
+  float glow = smoothstep(0.86, 1.0, curve) * 0.5;
+  // moving reflection sweep: a slow bright band travelling down the pane
+  float sweep = pow(max(0.0, sin(local.y * 0.004 - uTime * 0.55)), 12.0) * 0.10;
+  vec3 outc = refr * mix(0.93, 1.0, thickness);
+  outc += vec3(0.95, 0.98, 1.0) * rim * 0.55;
+  outc += vec3(0.55, 0.75, 0.95) * glow * 0.08;
+  outc += vec3(1.0) * sweep;
   fragColor = vec4(outc, inside);
 }`
 
@@ -70,7 +77,7 @@ export function createRefractionPass(
   opts: { refract?: number; dispersion?: number; radius?: number; zIndex?: number } = {},
 ): RefractionPass {
   const canvas = document.createElement('canvas')
-  canvas.style.cssText = `position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:${String(opts.zIndex ?? 2)};`
+  canvas.style.cssText = `position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:${opts.zIndex ?? 2};`
   document.body.appendChild(canvas)
   const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: false, antialias: false })
   if (gl === null) {
@@ -86,27 +93,18 @@ export function createRefractionPass(
     if (gl.getShaderParameter(sh, gl.COMPILE_STATUS) === false) throw new Error('[Refract] ' + String(gl.getShaderInfoLog(sh)))
     return sh
   }
-  const vs = makeShader(gl.VERTEX_SHADER, VERT)
-  const fs = makeShader(gl.FRAGMENT_SHADER, FRAG)
   const prog = gl.createProgram()
-  if (prog === null) throw new Error('[Refract] program creation failed')
-  gl.attachShader(prog, vs)
-  gl.attachShader(prog, fs)
+  gl.attachShader(prog, makeShader(gl.VERTEX_SHADER, VERT))
+  gl.attachShader(prog, makeShader(gl.FRAGMENT_SHADER, FRAG_SRC))
   gl.linkProgram(prog)
   if (gl.getProgramParameter(prog, gl.LINK_STATUS) === false) throw new Error('[Refract] link: ' + String(gl.getProgramInfoLog(prog)))
   gl.useProgram(prog)
-  const loc = (name: string): WebGLUniformLocation | null => gl.getUniformLocation(prog, name)
-  const uSea = loc('uSea')
-  const uRes = loc('uRes')
-  const uViewport = loc('uViewport')
-  const uPane = loc('uPane')
-  const uRadius = loc('uRadius')
-  const uRefract = loc('uRefract')
-  const uDisp = loc('uDisp')
+  const loc = (n: string): WebGLUniformLocation | null => gl.getUniformLocation(prog, n)
+  const uSea = loc('uSea'), uRes = loc('uRes'), uViewport = loc('uViewport'), uPane = loc('uPane'),
+    uRadius = loc('uRadius'), uRefract = loc('uRefract'), uDisp = loc('uDisp'), uTime = loc('uTime')
   gl.uniform1i(uSea, 0)
-  const aPos = gl.getAttribLocation(prog, 'aPos')
-  gl.enableVertexAttribArray(aPos)
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
+  gl.enableVertexAttribArray(0)
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
 
   const tex = gl.createTexture()
   gl.bindTexture(gl.TEXTURE_2D, tex)
@@ -116,12 +114,12 @@ export function createRefractionPass(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
   const resize = (): void => {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    canvas.width = Math.round(window.innerWidth * dpr)
-    canvas.height = Math.round(window.innerHeight * dpr)
+    const dpr = Math.min(devicePixelRatio || 1, 2)
+    canvas.width = Math.round(innerWidth * dpr)
+    canvas.height = Math.round(innerHeight * dpr)
     gl.viewport(0, 0, canvas.width, canvas.height)
   }
-  window.addEventListener('resize', resize)
+  addEventListener('resize', resize)
   resize()
 
   let rafId = 0
@@ -136,14 +134,15 @@ export function createRefractionPass(
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, seaCanvas)
       gl.enable(gl.BLEND)
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
       for (const pane of panes) {
         gl.uniform2f(uRes, canvas.width, canvas.height)
-        gl.uniform2f(uViewport, window.innerWidth, window.innerHeight)
+        gl.uniform2f(uViewport, innerWidth, innerHeight)
         gl.uniform4f(uPane, pane.x, pane.y, pane.w, pane.h)
         gl.uniform1f(uRadius, pane.radius ?? opts.radius ?? 22)
-        gl.uniform1f(uRefract, opts.refract ?? 20)
+        gl.uniform1f(uRefract, opts.refract ?? 18)
         gl.uniform1f(uDisp, opts.dispersion ?? 1.4)
+        gl.uniform1f(uTime, (performance.timeOrigin + performance.now()) % 100000 / 1000)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       }
     }
@@ -156,7 +155,7 @@ export function createRefractionPass(
     destroy() {
       destroyed = true
       cancelAnimationFrame(rafId)
-      window.removeEventListener('resize', resize)
+      removeEventListener('resize', resize)
       canvas.remove()
     },
   }
