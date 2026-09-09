@@ -42,8 +42,8 @@ export interface LiquidGlassSettings {
   foam: boolean
   /** Foam intensity multiplier, 0-1.5. */
   foamAmount: number
-  /** Sea style: data sea (zeabur) or ghibli anime waves. */
-  seaStyle: 'zeabur' | 'ghibli'
+  /** Sea style: data sea (zeabur), ghibli anime waves, or pixel ocean. */
+  seaStyle: 'zeabur' | 'ghibli' | 'pixel'
 }
 
 /** Default parameter values (the schema's defaults mirror these). */

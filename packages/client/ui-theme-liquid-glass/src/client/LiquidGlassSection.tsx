@@ -151,11 +151,14 @@ export function LiquidGlassSection({ t, useStore, set, setMany }: LiquidGlassSec
                 ['zeabur', 'light'],
                 ['ghibli', 'day'],
                 ['ghibli', 'dusk'],
+                ['pixel', 'dark'],
               ] as const).map(([style, theme]) => {
-                const active = value.seaStyle === style && value.seaTheme === theme
+                const active = value.seaStyle === style && (style === 'pixel' || value.seaTheme === theme)
                 const label = style === 'zeabur'
                   ? (theme === 'dark' ? t('style.zeabur.dark') : t('style.zeabur.light'))
-                  : (theme === 'day' ? t('style.ghibli.day') : t('style.ghibli.dusk'))
+                  : style === 'ghibli'
+                    ? (theme === 'day' ? t('style.ghibli.day') : t('style.ghibli.dusk'))
+                    : t('style.pixel')
                 return (
                   <button
                     key={style + theme}

@@ -23,7 +23,7 @@ interface SeaInstance {
   setColors?: (colorA: readonly number[] | undefined, colorB: readonly number[] | undefined) => void
   clearColors?: () => void
   setEffects?: (e: { cols?: number; bright?: number; flicker?: number; foamAmount?: number }) => void
-  setStyle?: (style: 'zeabur' | 'ghibli') => void
+  setStyle?: (style: 'zeabur' | 'ghibli' | 'pixel') => void
   setPlacement?: (x: number, y: number, w: number, h: number) => void
 }
 
@@ -49,8 +49,8 @@ export interface SeaWallpaperParams {
   /** WebGL refraction pass over the sea inside the glass panes. */
   /** Foam intensity multiplier, 0-1.5. */
   foamAmount?: number
-  /** Sea style: data sea (zeabur) or ghibli anime waves. */
-  seaStyle?: 'zeabur' | 'ghibli'
+  /** Sea style: data sea (zeabur), ghibli anime waves, or pixel ocean. */
+  seaStyle?: 'zeabur' | 'ghibli' | 'pixel'
 }
 
 /** The sea global the injected IIFE defines. */
@@ -178,7 +178,7 @@ export function mountSeaWallpaper(params: SeaWallpaperParams): void {
   })
   pushDigitEffects(params)
   instance.setTheme?.(params.seaTheme)
-  instance.setStyle?.(params.seaStyle === 'ghibli' ? 'ghibli' : 'zeabur')
+  instance.setStyle?.(params.seaStyle === 'ghibli' || params.seaStyle === 'pixel' ? params.seaStyle : 'zeabur')
   // Join the screen-anchored ocean: poll own viewport, render own slice.
   startPlacementLoop()
 }
@@ -200,7 +200,7 @@ export function updateSeaWallpaper(params: SeaWallpaperParams): void {
   }
   pushDigitEffects(params)
   instance.setTheme?.(params.seaTheme)
-  instance.setStyle?.(params.seaStyle === 'ghibli' ? 'ghibli' : 'zeabur')
+  instance.setStyle?.(params.seaStyle === 'ghibli' || params.seaStyle === 'pixel' ? params.seaStyle : 'zeabur')
 }
 
 /** Push the digit/foam effect parameters to the live instance. */
