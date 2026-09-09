@@ -21,7 +21,6 @@ interface SeaInstance {
   setTheme?: (theme: string) => void
   setSpeed?: (speed: number) => void
   setColors?: (colorA: readonly number[] | undefined, colorB: readonly number[] | undefined) => void
-  setPanes?: (panes: Array<{ x: number; y: number; w: number; h: number; radius: number }>) => void
   clearColors?: () => void
   setEffects?: (e: { cols?: number; bright?: number; flicker?: number; foamAmount?: number }) => void
   setStyle?: (style: 'zeabur' | 'ghibli') => void
@@ -30,7 +29,6 @@ interface SeaInstance {
 
 let instance: SeaInstance | undefined
 
-let paneRectsCache: Array<{ x: number; y: number; w: number; h: number; radius: number }> = []
 
 /** One wallpaper parameter set: palette, flow speed, and the digital-sea effect dials. */
 export interface SeaWallpaperParams {
@@ -49,7 +47,6 @@ export interface SeaWallpaperParams {
   /** Whether the character-spray foam layer renders. */
   foam?: boolean
   /** WebGL refraction pass over the sea inside the glass panes. */
-  refraction?: boolean
   /** Foam intensity multiplier, 0-1.5. */
   foamAmount?: number
   /** Sea style: data sea (zeabur) or ghibli anime waves. */
@@ -180,13 +177,10 @@ export function mountSeaWallpaper(params: SeaWallpaperParams): void {
     ...(colorB !== undefined ? { colorB } : {}),
   })
   pushDigitEffects(params)
-  pushPaneUniforms()
   instance.setTheme?.(params.seaTheme)
   instance.setStyle?.(params.seaStyle === 'ghibli' ? 'ghibli' : 'zeabur')
   // Join the screen-anchored ocean: poll own viewport, render own slice.
   startPlacementLoop()
-  if (params.refraction !== false) startPaneTracking()
-  pushPaneUniforms()
 }
 
 /**
@@ -205,16 +199,8 @@ export function updateSeaWallpaper(params: SeaWallpaperParams): void {
     instance.clearColors?.()
   }
   pushDigitEffects(params)
-  pushPaneUniforms()
   instance.setTheme?.(params.seaTheme)
   instance.setStyle?.(params.seaStyle === 'ghibli' ? 'ghibli' : 'zeabur')
-}
-
-/** Push the glass pane rects (css px) to the sea instance for in-shader refraction. */
-function pushPaneUniforms(): void {
-  if (instance === undefined) return
-  const panes = document.body.getAttribute('data-ds-glass') !== null ? paneRectsCache : []
-  instance.setPanes?.(panes)
 }
 
 /** Push the digit/foam effect parameters to the live instance. */
@@ -228,41 +214,10 @@ function pushDigitEffects(params: SeaWallpaperParams): void {
   })
 }
 
-/** Known app pane selectors (sidebar column + center composer + details). */
-const PANE_SELECTORS = ["[class*='sidebarCol']", "[class*='centerCol']", "[class*='detailsCol']"]
-
-/** Re-read the app pane rects (throttled; DOM reads are expensive). */
-let paneTimer: ReturnType<typeof setInterval> | undefined
-function startPaneTracking(): void {
-  if (paneTimer !== undefined) return
-  const read = (): void => {
-    const rects: Array<{ x: number; y: number; w: number; h: number; radius: number }> = []
-    for (const sel of PANE_SELECTORS) {
-      const el = document.querySelector(sel)
-      if (el === null) continue
-      const r = el.getBoundingClientRect()
-      if (r.width < 40 || r.height < 40) continue
-      rects.push({ x: r.left, y: r.top, w: r.width, h: r.height, radius: 20 })
-    }
-    paneRectsCache = rects
-  }
-  read()
-  paneTimer = setInterval(read, 500)
-}
-function stopPaneTracking(): void {
-  if (paneTimer !== undefined) {
-    clearInterval(paneTimer)
-    paneTimer = undefined
-  }
-  paneRectsCache = []
-}
-
-/** Create the refraction pass bound to the current sea canvas. */
 /** Unmount the sea wallpaper and stop its animation. Idempotent. */
 export function unmountSeaWallpaper(): void {
   if (typeof document === 'undefined') return
   stopPlacementLoop()
-  stopPaneTracking()
   document.querySelector(WALLPAPER_SELECTOR)?.remove()
   instance?.destroy()
   instance = undefined
